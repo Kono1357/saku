@@ -5,10 +5,10 @@
 (function (global) {
   'use strict';
 
-  var D = null, W = 0, H = 0, INK = {}, SC = {}, OM = null;
+  var D = null, W = 0, H = 0, INK = {}, SC = {}, OM = null, PLAN = {}, PLACES = {};
   var host = null, preEl = null, actorEl = null, fxEl = null, tagEl = null, sayEl = null;
   var LX = 0, LY = 0;
-  var cur = '', mode = 'room', sceneKey = '';
+  var cur = '', mode = 'room', sceneKey = '', forcedXY = null;
   var opts = { night: false, rain: false, snow: false, period: false };
   var anim = { name: 'idle', t0: 0 };
   var tick = null, fitBound = false;
@@ -42,23 +42,18 @@
   }
 
   function hlRanges(which) {
-    if (which !== 'world' || !OM || !OM.pos) return null;
-    var p = OM.pos[sceneKey];
+    if (which !== 'world' || !OM || !OM.rows) return null;
+    var p = forcedXY;
     if (!p) return null;
-    var b = OM.buildings && OM.buildings[p[0]];
-    if (!b) return null;
+    var b = { name: (PLACES[sceneKey] ? PLACES[sceneKey][3][0] : '') };
     /* 返回当前地标的所有字符范围，用亮色渲染 */
     var ranges = [];
     for (var y = 0; y < H; y++) {
       var row = OM.rows[y] || '';
       for (var x = 0; x < row.length; x++) {
         var ch = row[x];
-        if (ch === '^' && b.name === '家') ranges.push([y, x, x]);
-        else if (ch === 'S' && b.name === '学校') ranges.push([y, x, x]);
-        else if (ch === 'L' && b.name === '图书馆') ranges.push([y, x, x]);
-        else if (ch === 'C' && b.name === '便利店') ranges.push([y, x, x]);
-        else if ((ch === 'T') && b.name === '公园') ranges.push([y, x, x]);
-        else if (ch === 'A' && b.name === '车站') ranges.push([y, x, x]);
+        var d2 = Math.abs(x - p[0]) + Math.abs(y - p[1]);
+        if (d2 <= 7 && '^SLCATP'.indexOf(ch) >= 0) ranges.push([y, x, x]);
       }
     }
     return ranges;
@@ -94,8 +89,7 @@
   function placeActor() {
     var sp;
     if (mode === 'world') {
-      var p = (OM && OM.pos && OM.pos[sceneKey]) || null;
-      sp = p ? [p[1], p[2]] : [15, 11];
+      sp = forcedXY || [15, 11];
     } else {
       sp = SPOT[cur] || [26, 12];
     }
@@ -150,6 +144,7 @@
     host = o.host;
     D = o.data;
     W = D.w; H = D.h; INK = D.ink; SC = D.scenes; OM = D.overmap;
+    PLAN = D.plan || {}; PLACES = D.places || {};
     preEl = document.createElement('pre'); preEl.className = 'a-pre';
     actorEl = document.createElement('span'); actorEl.className = 'a-actor';
     fxEl = document.createElement('div'); fxEl.className = 'a-fx';
@@ -167,30 +162,40 @@
     return Promise.resolve();
   }
 
+  /* 按现实时刻查朔在哪：返回 {place,scene,act,indoor,cn,map,xy} */
+  function mins(hhmm) { var p = hhmm.split(':'); return (+p[0]) * 60 + (+p[1]); }
+
+  function placeAt(date) {
+    var plan = (date.getDay() === 0 || date.getDay() === 6) ? PLAN.weekend : PLAN.weekday;
+    if (!plan || !plan.length) return null;
+    var m = date.getHours() * 60 + date.getMinutes();
+    var hit = plan[plan.length - 1];
+    for (var i = 0; i < plan.length; i++) {
+      if (mins(plan[i][0]) <= m && m < mins(plan[i][1])) { hit = plan[i]; break; }
+    }
+    var p = PLACES[hit[2]] || ['bedroom', true, '卧室', ['home', 6, 8]];
+    return {
+      place: hit[2], scene: hit[3], act: hit[4],
+      room: p[0], indoor: !!p[1], cn: p[2],
+      map: p[3] ? p[3][0] : 'road',
+      xy: p[3] ? [p[3][1], p[3][2]] : [15, 11]
+    };
+  }
+
   /* o: {map:'room'|'world', sceneKey, night, rain, snow, period} */
   function setScene(name, o) {
     o = o || {};
     opts.night = !!o.night; opts.rain = !!o.rain;
     opts.snow = !!o.snow; opts.period = !!o.period;
     if (o.sceneKey) sceneKey = o.sceneKey;
+    if (o.xy) forcedXY = o.xy;
     var want = o.map === 'world' ? 'world' : 'room';
     var key = want === 'world' ? '__world__' : name;
     if (mode !== want || cur !== key) { mode = want; cur = key; renderMap(want, name); }
     host.classList.toggle('is-night', opts.night);
     host.classList.toggle('is-period', opts.period);
     host.classList.toggle('is-world', mode === 'world');
-    if (tagEl) {
-      var label;
-      if (mode === 'world') {
-        var pp = OM && OM.pos && OM.pos[sceneKey];
-        var bb = pp && OM.buildings && OM.buildings[pp[0]];
-        label = '城区 · 大世界' + (bb ? ' · ' + bb.name : '');
-      } else {
-        label = '室内 · ' + ((SC[name] && SC[name].name) || name);
-      }
-      tagEl.textContent = label;
-      tagEl.style.display = 'block';
-    }
+
     makeFx();
     placeActor();
   }
@@ -202,11 +207,17 @@
     placeActor();
   }
 
+  function setTag(text) {
+    if (!tagEl) return;
+    tagEl.textContent = text;
+    tagEl.style.display = 'block';
+  }
+
   function say(text) {
     sayEl.textContent = text;
     sayEl.classList.add('on');
     setTimeout(function () { sayEl.classList.remove('on'); }, 2600);
   }
 
-  global.SakuAscii = { init: init, setScene: setScene, setAction: setAction, say: say };
+  global.SakuAscii = { init: init, setScene: setScene, setAction: setAction, setTag: setTag, say: say, placeAt: placeAt };
 })(window);
