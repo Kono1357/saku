@@ -230,29 +230,7 @@ async function decrypt(password, enc){
   return JSON.parse(new TextDecoder().decode(plain));
 }
 
-/* ---------- 会动的朔（两套地图：室内 + 大世界） ---------- */
-/* scene -> [[室内场景, 动作]...]，按日期+小时确定性挑一个 */
-const SCENE_SET = {
-  sleep:       [['bedroom', 'sleep']],
-  wake:        [['bedroom', 'idle'], ['hall', 'idle']],
-  school_am:   [['classroom', 'study'], ['hall', 'idle'], ['stair', 'walk']],
-  lunch:       [['store', 'eat'], ['kitchen', 'eat']],
-  school_noon: [['cafe', 'eat'], ['classroom', 'idle']],
-  school_pm:   [['classroom', 'study'], ['library', 'read']],
-  home_evening:[['bedroom', 'read'], ['kitchen', 'cook'], ['desk', 'study'], ['laundry', 'idle']],
-  study:       [['desk', 'study'], ['library', 'read'], ['bookstore', 'read']],
-  night:       [['bath', 'bath'], ['bedroom', 'phone']],
-  wk_morning:  [['bedroom', 'idle'], ['kitchen', 'cook']],
-  wk_noon:     [['kitchen', 'cook'], ['store', 'shop'], ['cafe', 'eat']],
-  wk_afternoon:[['park', 'play'], ['playground', 'play']],
-  wk_evening:  [['bookstore', 'read'], ['library', 'read'], ['roof', 'idle'], ['bedroom', 'read']],
-};
-/* 出门在外的场景 -> 显示大世界地图，@ 停在对应路点 */
-const OUTDOOR = {
-  commute:      [['street','walk'], ['crossing','walk'], ['station','wait']],
-  commute_home: [['station','wait'], ['crossing','walk'], ['street','walk']],
-};
-const NIGHT_SCENES = { sleep:1, night:1, wk_evening:1 };
+/* ---------- 会动的朔（画面由生活轨迹表驱动，与文字报告同源） ---------- */
 const SAYS = [
   '……没什么，一般。',
   '嗯，没事。我一个人就可以了。',
@@ -265,33 +243,33 @@ const SAYS = [
 let asciiReady = false;
 let lastSceneKey = '';
 
+const ACT_CN = {
+  idle:'站着，没什么表情', sleep:'睡着了', walk:'在走', study:'低头写着什么',
+  eat:'在吃东西', read:'在看书', bath:'在洗漱', shop:'在挑东西', wait:'在等车',
+  play:'在操场边上', cook:'在煮东西', phone:'在看手机',
+};
+
 function petState(d){
-  if (!asciiReady) return;
-  const sc = d.scene || '';
+  if (!asciiReady || !SakuAscii.placeAt) return;
+  if (!lastClock) return;
+  const P = SakuAscii.placeAt(lastClock);
+  if (!P) return;
+
   const rain = /雨/.test(d.weather || '');
   const snow = /雪/.test(d.weather || '');
-  const hour = parseInt((d.now || '').slice(11, 13), 10);
-  const day = parseInt((d.now || '').slice(8, 10), 10);
-
-  let map = 'room', name = 'bedroom', act = 'idle';
-  if (OUTDOOR[sc]) {
-    const o = OUTDOOR[sc][(day + hour) % OUTDOOR[sc].length];
-    map = 'world'; name = o[0]; act = o[1];
-  } else {
-    const set = SCENE_SET[sc] || [['bedroom', 'idle']];
-    const pick = set[(day + hour) % set.length];
-    name = pick[0]; act = pick[1];
-  }
-
-  const key = map + '|' + name + '|' + act + '|' + (rain ? 'r' : snow ? 's' : '') + '|' + (d.period ? 'p' : '');
+  const key = [P.place, P.scene, P.act, rain ? 'r' : snow ? 's' : '', d.period ? 'p' : ''].join('|');
   if (key === lastSceneKey) return;
   lastSceneKey = key;
 
-  SakuAscii.setScene(name, {
-    map: map, sceneKey: name, night: !!NIGHT_SCENES[sc],
+  SakuAscii.setScene(P.room, {
+    map: P.indoor ? 'room' : 'world',
+    sceneKey: P.place,
+    xy: P.xy,
+    night: P.scene === 'sleep' || P.scene === 'night',
     rain: rain, snow: snow, period: !!d.period,
   });
-  SakuAscii.setAction(act);
+  SakuAscii.setAction(P.act, ACT_CN[P.act] || '');
+  SakuAscii.setTag(P.indoor ? '室内 · ' + P.cn : '城区 · ' + P.cn);
 }
 
 document.getElementById('pet').addEventListener('click', () => {
@@ -304,12 +282,15 @@ async function initAscii(){
   await SakuAscii.init({ host: $('screen'), data: data });
   asciiReady = true;
   lastSceneKey = '';
+  if (typeof pull === 'function') pull();
 }
 
 
 /* ---------- 时钟 ---------- */
+var lastClock = new Date();
 function tickClock(){
   var d = new Date();
+  lastClock = d;
   $('clkTime').textContent = pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
   $('clkDate').innerHTML = '<span class="clk-dot"></span>'
     + d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
