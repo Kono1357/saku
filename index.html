@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a0d15">
+<meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
+<title>朔</title>
+<style>
+  :root{
+    --bg:#0a0d15; --line:rgba(255,255,255,.09);
+    --fg:#e6ecf7; --dim:#8593ab; --dim2:#5d6a80; --accent:#c9b98f;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(140% 70% at 82% -8%, #1d2b45 0%, rgba(29,43,69,0) 55%),
+      radial-gradient(90% 50% at 10% 12%, #16203a 0%, rgba(22,32,58,0) 60%),
+      var(--bg);
+    color:var(--fg);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif;
+    font-size:15px; line-height:1.75; min-height:100vh;
+    padding:0 0 env(safe-area-inset-bottom);
+  }
+  .wrap{max-width:680px;margin:0 auto;padding:26px 20px 60px}
+  .hide{display:none !important}
+
+  /* ---------- 密码门 ---------- */
+  .gate{min-height:82vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+  .gate .moon{width:56px;height:56px;margin-bottom:18px;opacity:.9}
+  .gate h1{font-size:26px;margin:0;letter-spacing:8px;font-weight:600}
+  .gate p{color:var(--dim2);font-size:12.5px;letter-spacing:1px;margin:10px 0 26px}
+  .gate input{
+    width:100%;max-width:300px;padding:13px 16px;border-radius:12px;
+    border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--fg);
+    font-size:16px;font-family:inherit;outline:none;text-align:center;letter-spacing:1px;
+  }
+  .gate input:focus{border-color:rgba(201,185,143,.45)}
+  .gate button{
+    margin-top:14px;width:100%;max-width:300px;padding:13px;border-radius:12px;
+    border:1px solid rgba(201,185,143,.35);background:rgba(201,185,143,.12);
+    color:#e8dcb4;font-size:15px;font-family:inherit;font-weight:600;cursor:pointer;
+  }
+  .gate button:active{transform:scale(.98)}
+  .gate .err{color:#f0a0a0;font-size:12.5px;margin-top:14px;min-height:18px}
+  .gate .tip{color:var(--dim2);font-size:11.5px;margin-top:20px;line-height:1.9;max-width:300px}
+
+  /* ---------- 主界面 ---------- */
+  .topbar{display:flex;align-items:flex-start;gap:14px}
+  .clock{margin-left:auto;text-align:right;flex:0 0 auto}
+  .clk-time{font-size:30px;font-weight:600;color:#f0e6c8;letter-spacing:1px;
+            font-variant-numeric:tabular-nums;line-height:1.15}
+  .clk-date{font-size:11.5px;color:var(--dim2);letter-spacing:.5px;margin-top:3px}
+  .clk-dot{display:inline-block;width:6px;height:6px;border-radius:50%;
+           background:#7dd3fc;margin-right:5px;vertical-align:middle;animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+  .moon{width:44px;height:44px;margin-bottom:14px;opacity:.9}
+  h1{font-size:26px;margin:0;letter-spacing:6px;font-weight:600}
+  .sub{color:var(--dim2);font-size:12px;letter-spacing:1.5px;margin-top:4px}
+  .meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+  .chip{font-size:12px;color:var(--dim);border:1px solid var(--line);
+        padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.02)}
+  .now{margin-top:24px;border-radius:16px;padding:18px 18px 8px;
+       border:1px solid rgba(201,185,143,.28);
+       background:linear-gradient(180deg,rgba(201,185,143,.10),rgba(201,185,143,.02));
+       box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  .nowtop{display:flex;align-items:baseline;gap:10px;margin-bottom:4px}
+  .nowlabel{font-size:11.5px;letter-spacing:3px;color:var(--accent)}
+  .nowtime{margin-left:auto;font-size:22px;font-weight:600;color:#f0e6c8;
+           font-variant-numeric:tabular-nums;letter-spacing:1px}
+  .nowsub{font-size:12px;color:var(--dim2);margin-bottom:12px}
+  .now ul{list-style:none;margin:0;padding:0}
+  .now li{display:flex;gap:13px;padding:9px 0;border-top:1px solid rgba(255,255,255,.06)}
+  .now .t{flex:0 0 46px;color:#9d8f68;font-size:12.5px;font-variant-numeric:tabular-nums;padding-top:3px}
+  .now .x{margin:0;flex:1;color:#f2ecdc}
+  .arch{margin-top:30px}
+  .archlabel{font-size:11.5px;letter-spacing:3px;color:var(--dim2);margin-bottom:12px}
+  .day{margin-bottom:9px;border:1px solid var(--line);border-radius:13px;overflow:hidden;
+       background:rgba(255,255,255,.018)}
+  .dayhead{display:flex;align-items:center;gap:10px;cursor:pointer;
+           padding:12px 15px;font-size:13.5px;color:var(--dim);user-select:none}
+  .dayhead .wd{color:var(--dim2);font-size:12px}
+  .dayhead .tag{font-size:11px;color:var(--accent);border:1px solid rgba(201,185,143,.3);
+                border-radius:999px;padding:1px 7px}
+  .dayhead .n{margin-left:auto;color:var(--dim2);font-size:12px}
+  .dayhead .arrow{color:var(--dim2);font-size:10px;transition:transform .2s}
+  .day.open .dayhead .arrow{transform:rotate(90deg)}
+  .day.open .dayhead{color:var(--accent)}
+  ul.items{list-style:none;margin:0;padding:0 15px;display:none}
+  .day.open ul.items{display:block;padding-bottom:8px}
+  ul.items li{display:flex;gap:14px;padding:10px 0;border-top:1px solid rgba(255,255,255,.045)}
+  ul.items .t{flex:0 0 46px;color:var(--dim2);font-size:12.5px;
+              font-variant-numeric:tabular-nums;padding-top:3px}
+  ul.items .x{margin:0;flex:1;color:#dfe6f2}
+  .night .x{color:#c3cddd}
+  footer{margin-top:34px;padding-top:20px;border-top:1px solid var(--line);
+         color:var(--dim2);font-size:12px;line-height:1.9}
+  .lockline{margin-top:10px}
+  .lockline a{color:var(--dim2);text-decoration:underline;cursor:pointer}
+</style>
+</head>
+<body>
+
+<!-- ================= 密码门 ================= -->
+<div class="wrap gate" id="gate">
+  <svg class="moon" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+    <path d="M30 6a18 18 0 1 0 12 30 15 15 0 0 1-12-30Z" fill="#c9b98f" opacity=".85"/>
+  </svg>
+  <h1>朔</h1>
+  <p>这个世界是加密的</p>
+  <input id="pw" type="password" placeholder="请输入密码" autocomplete="current-password" inputmode="text">
+  <button id="go">进入</button>
+  <div class="err" id="err"></div>
+  <div class="tip">没有密码只能看到密文。<br>勾选浏览器的「记住密码」，之后打开就不用再输。</div>
+</div>
+
+<!-- ================= 主界面 ================= -->
+<div class="wrap hide" id="main">
+  <div class="topbar">
+    <div>
+      <svg class="moon" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+        <path d="M30 6a18 18 0 1 0 12 30 15 15 0 0 1-12-30Z" fill="#c9b98f" opacity=".85"/>
+      </svg>
+      <h1>朔</h1>
+      <div class="sub">现实时间同步 · 只读观察窗口</div>
+    </div>
+    <div class="clock">
+      <div class="clk-time" id="clkTime">--:--:--</div>
+      <div class="clk-date" id="clkDate"><span class="clk-dot"></span>—</div>
+    </div>
+  </div>
+
+  <div class="meta">
+    <span class="chip" id="wxChip">—</span>
+    <span class="chip" id="cntChip">—</span>
+    <span class="chip" id="bornChip">—</span>
+  </div>
+
+  <section class="now">
+    <div class="nowtop">
+      <span class="nowlabel">现在</span>
+      <span class="nowtime" id="nowTime">--:--</span>
+    </div>
+    <div class="nowsub" id="nowSub">—</div>
+    <ul id="nowList"></ul>
+  </section>
+
+  <section class="arch">
+    <div class="archlabel">归档 · 按日期收起</div>
+    <div id="days"></div>
+  </section>
+
+  <footer>
+    <div>这个世界与现实时间 1:1 同步运行。你不在的时候，它不会暂停。</div>
+    <div>每条记录由时间确定性生成：同一时刻，永远是同一段经历。</div>
+    <div class="lockline"><a id="lock">锁定并清除本机密码</a></div>
+  </footer>
+</div>
+
+<script src="saku-data.enc.js"></script>
+<script src="saku-engine.js"></script>
+<script>
+/* 世界设定 —— 改这里可以换一条世界线 */
+var WORLD_START = {
+  date:  new Date(2026, 8, 19, 0, 0, 0),   // 2026-09-19 00:00
+  anchor:new Date(2026, 8, 8, 0, 0, 0),    // 生理周期锚点
+  seed:  20260919
+};
+var NOW_COUNT = 3;
+var STORE_KEY = 'saku_pw';
+
+function $(id){ return document.getElementById(id); }
+function pad(n){ return n < 10 ? '0' + n : '' + n; }
+function b64buf(b64){
+  var bin = atob(b64), len = bin.length, arr = new Uint8Array(len);
+  for (var i = 0; i < len; i++) arr[i] = bin.charCodeAt(i);
+  return arr;
+}
+
+/* ---------- 解密 ---------- */
+async function decrypt(password, enc){
+  var material = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+  var key = await crypto.subtle.deriveKey(
+    { name:'PBKDF2', salt: b64buf(enc.salt), iterations: 250000, hash:'SHA-256' },
+    material, { name:'AES-GCM', length:256 }, false, ['decrypt']);
+
+  var ct = b64buf(enc.ct), tag = b64buf(enc.tag);
+  var joined = new Uint8Array(ct.length + tag.length);
+  joined.set(ct, 0); joined.set(tag, ct.length);
+
+  var plain = await crypto.subtle.decrypt(
+    { name:'AES-GCM', iv: b64buf(enc.iv) }, key, joined);
+  return JSON.parse(new TextDecoder().decode(plain));
+}
+
+/* ---------- 时钟 ---------- */
+function tickClock(){
+  var d = new Date();
+  $('clkTime').textContent = pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
+  $('clkDate').innerHTML = '<span class="clk-dot"></span>'
+    + d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+}
+setInterval(tickClock, 1000);
+
+/* ---------- 渲染 ---------- */
+function fmtDay(iso){
+  var p = iso.split('-').map(Number);
+  var today = new Date(); today.setHours(0,0,0,0);
+  var diff = Math.round((today - new Date(p[0], p[1]-1, p[2]))/86400000);
+  var name = p[1]+'月'+p[2]+'日';
+  if (new Date().getFullYear() !== p[0]) name = p[0]+'年'+name;
+  return { name:name, tag: diff===0?'今天':diff===1?'昨天':diff===2?'前天':'' };
+}
+function isNight(t){ var h = parseInt(t.slice(0,2),10); return h < 6 || h >= 22; }
+function line(t, text){
+  var li = document.createElement('li');
+  if (isNight(t)) li.className = 'night';
+  var a = document.createElement('span'); a.className='t'; a.textContent=t;
+  var b = document.createElement('p'); b.className='x'; b.textContent=text;
+  li.appendChild(a); li.appendChild(b);
+  return li;
+}
+function renderData(d){
+  $('wxChip').textContent = '天气 ' + d.weather;
+  $('cntChip').textContent = '已记录 ' + d.total + ' 条';
+  $('bornChip').textContent = '世界起点 ' + d.bornAt;
+
+  var days = d.days || [];
+  var latest = days.length ? days[days.length-1] : null;
+  $('nowTime').textContent = latest && latest.items.length
+    ? latest.items[latest.items.length-1].time : '--:--';
+  $('nowSub').textContent = latest ? ('最近一次记录 · ' + latest.date + ' ' + latest.weekday) : '还没有记录';
+
+  var nl = $('nowList'); nl.innerHTML = '';
+  if (latest) latest.items.slice(-NOW_COUNT).forEach(function(it){ nl.appendChild(line(it.time, it.text)); });
+
+  var box = $('days'); box.innerHTML = '';
+  if (!days.length){ box.innerHTML = '<div class="loading">还没有记录。</div>'; return; }
+  days.slice().reverse().forEach(function(day){
+    var lab = fmtDay(day.date);
+    var sec = document.createElement('section'); sec.className='day';
+    var head = document.createElement('div'); head.className='dayhead';
+    head.innerHTML = '<span class="arrow">▶</span><span>'+lab.name+'</span>'
+      + '<span class="wd">'+day.weekday+'</span>'
+      + (lab.tag ? '<span class="tag">'+lab.tag+'</span>' : '')
+      + '<span class="n">'+day.items.length+' 条</span>';
+    head.addEventListener('click', function(){ sec.classList.toggle('open'); });
+    sec.appendChild(head);
+    var ul = document.createElement('ul'); ul.className='items';
+    day.items.forEach(function(it){ ul.appendChild(line(it.time, it.text)); });
+    sec.appendChild(ul);
+    box.appendChild(sec);
+  });
+}
+
+var DATA = null;
+function refresh(){
+  if (!DATA) return;
+  try{
+    renderData(Saku.feed(WORLD_START, new Date(), DATA));
+  }catch(e){ $('nowSub').textContent = '出错了：' + e.message; }
+}
+
+function enter(data){
+  DATA = data;
+  $('gate').classList.add('hide');
+  $('main').classList.remove('hide');
+  tickClock(); refresh();
+  setInterval(refresh, 60000);
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden){ tickClock(); refresh(); } });
+}
+
+async function tryOpen(password, remember){
+  $('err').textContent = '';
+  $('go').textContent = '解密中…';
+  try{
+    var data = await decrypt(password, window.SAKU_ENC);
+    if (remember) { try { localStorage.setItem(STORE_KEY, password); } catch(e){} }
+    enter(data);
+  }catch(e){
+    $('err').textContent = '密码不对，或者数据已损坏';
+    $('go').textContent = '进入';
+    try { localStorage.removeItem(STORE_KEY); } catch(e2){}
+  }
+}
+
+$('go').addEventListener('click', function(){ tryOpen($('pw').value, true); });
+$('pw').addEventListener('keydown', function(e){ if (e.key === 'Enter') tryOpen($('pw').value, true); });
+$('lock').addEventListener('click', function(){
+  try { localStorage.removeItem(STORE_KEY); } catch(e){}
+  location.reload();
+});
+
+/* 打开时：先试记住的密码 */
+(function(){
+  var saved = null;
+  try { saved = localStorage.getItem(STORE_KEY); } catch(e){}
+  if (saved) { tryOpen(saved, false); }
+  else { $('pw').focus(); }
+})();
+</script>
+</body>
+</html>
