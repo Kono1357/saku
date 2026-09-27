@@ -333,6 +333,8 @@
       bornAt: dayKey(worldStart.date),
       lastTime: last ? hhmm(last) : '--:--',
       weather: res.weather,
+      scene: sceneOf(now),
+      period: inPeriod(worldStart.anchor, now),
       total: events.length,
       days: order.map(function (k) { return days[k]; })
     };
