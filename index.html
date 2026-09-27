@@ -61,6 +61,34 @@
   .meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
   .chip{font-size:12px;color:var(--dim);border:1px solid var(--line);
         padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.02)}
+  /* ---------- 角色（ASCII 观测窗） ---------- */
+  .pet{margin-top:22px;border-radius:12px;overflow:hidden;position:relative;
+       border:1px solid rgba(255,255,255,.08);background:#080b12}
+  .screen{position:relative;overflow:hidden;padding:8px 6px 30px 8px;
+          font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Courier New",monospace;
+          line-height:1.18;letter-spacing:0;background:#080b12;
+          transition:background .8s}
+  .a-pre{margin:0;white-space:pre;font:inherit;line-height:inherit;
+         transition:filter .8s}
+  .a-actor{position:absolute;font:inherit;line-height:inherit;color:#f2ecdc;
+           text-shadow:0 0 5px rgba(242,236,220,.85);z-index:3}
+  .a-fx{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:2}
+  .a-fx i{position:absolute;top:-10%;font-style:normal;
+          animation-name:a-fall;animation-timing-function:linear;animation-iteration-count:infinite}
+  @keyframes a-fall{from{transform:translateY(0)}to{transform:translateY(360px)}}
+  .a-say{position:absolute;left:8px;right:8px;bottom:5px;z-index:4;
+         font-family:-apple-system,"PingFang SC","Noto Sans SC",sans-serif;
+         font-size:12px;line-height:1.5;color:#c9b98f;
+         background:rgba(10,14,22,.88);border:1px solid rgba(201,185,143,.22);
+         border-radius:7px;padding:4px 9px}
+  .a-tag{position:absolute;left:8px;top:4px;z-index:5;pointer-events:none;
+         font-family:-apple-system,"PingFang SC",sans-serif;font-size:10px;letter-spacing:1px;
+         color:#8ea0bd;background:rgba(8,11,18,.82);border:1px solid rgba(142,160,189,.22);
+         border-radius:5px;padding:1px 6px;opacity:.9}
+  .screen.is-world .a-pre{filter:saturate(.95)}
+  .screen.is-night .a-pre{filter:brightness(.66) saturate(.72) hue-rotate(-8deg)}
+  .screen.is-period .a-pre{filter:brightness(.92) saturate(.8) sepia(.18)}
+
   .now{margin-top:24px;border-radius:16px;padding:18px 18px 8px;
        border:1px solid rgba(201,185,143,.28);
        background:linear-gradient(180deg,rgba(201,185,143,.10),rgba(201,185,143,.02));
@@ -137,6 +165,11 @@
     <span class="chip" id="bornChip">—</span>
   </div>
 
+  <!-- 会动的朔（ASCII 观测窗） -->
+  <section class="pet" id="pet">
+    <div class="screen" id="screen"></div>
+  </section>
+
   <section class="now">
     <div class="nowtop">
       <span class="nowlabel">现在</span>
@@ -159,6 +192,8 @@
 </div>
 
 <script src="saku-data.enc.js"></script>
+<script src="saku-ascii.enc.js"></script>
+<script src="saku-ascii.js"></script>
 <script src="saku-engine.js"></script>
 <script>
 /* 世界设定 —— 改这里可以换一条世界线 */
@@ -194,6 +229,83 @@ async function decrypt(password, enc){
     { name:'AES-GCM', iv: b64buf(enc.iv) }, key, joined);
   return JSON.parse(new TextDecoder().decode(plain));
 }
+
+/* ---------- 会动的朔（两套地图：室内 + 大世界） ---------- */
+/* scene -> [[室内场景, 动作]...]，按日期+小时确定性挑一个 */
+const SCENE_SET = {
+  sleep:       [['bedroom', 'sleep']],
+  wake:        [['bedroom', 'idle'], ['hall', 'idle']],
+  school_am:   [['classroom', 'study'], ['hall', 'idle'], ['stair', 'walk']],
+  lunch:       [['store', 'eat'], ['kitchen', 'eat']],
+  school_noon: [['cafe', 'eat'], ['classroom', 'idle']],
+  school_pm:   [['classroom', 'study'], ['library', 'read']],
+  home_evening:[['bedroom', 'read'], ['kitchen', 'cook'], ['desk', 'study'], ['laundry', 'idle']],
+  study:       [['desk', 'study'], ['library', 'read'], ['bookstore', 'read']],
+  night:       [['bath', 'bath'], ['bedroom', 'phone']],
+  wk_morning:  [['bedroom', 'idle'], ['kitchen', 'cook']],
+  wk_noon:     [['kitchen', 'cook'], ['store', 'shop'], ['cafe', 'eat']],
+  wk_afternoon:[['park', 'play'], ['playground', 'play']],
+  wk_evening:  [['bookstore', 'read'], ['library', 'read'], ['roof', 'idle'], ['bedroom', 'read']],
+};
+/* 出门在外的场景 -> 显示大世界地图，@ 停在对应路点 */
+const OUTDOOR = {
+  commute:      [['street','walk'], ['crossing','walk'], ['station','wait']],
+  commute_home: [['station','wait'], ['crossing','walk'], ['street','walk']],
+};
+const NIGHT_SCENES = { sleep:1, night:1, wk_evening:1 };
+const SAYS = [
+  '……没什么，一般。',
+  '嗯，没事。我一个人就可以了。',
+  '（掷了一下骰子）……唔。今天是这样啊。',
+  '真好啊（小声），那就先这样吧。',
+  '麻烦。不喜欢。讨厌。好烦。',
+  '……你也在这儿啊。',
+];
+
+let asciiReady = false;
+let lastSceneKey = '';
+
+function petState(d){
+  if (!asciiReady) return;
+  const sc = d.scene || '';
+  const rain = /雨/.test(d.weather || '');
+  const snow = /雪/.test(d.weather || '');
+  const hour = parseInt((d.now || '').slice(11, 13), 10);
+  const day = parseInt((d.now || '').slice(8, 10), 10);
+
+  let map = 'room', name = 'bedroom', act = 'idle';
+  if (OUTDOOR[sc]) {
+    const o = OUTDOOR[sc][(day + hour) % OUTDOOR[sc].length];
+    map = 'world'; name = o[0]; act = o[1];
+  } else {
+    const set = SCENE_SET[sc] || [['bedroom', 'idle']];
+    const pick = set[(day + hour) % set.length];
+    name = pick[0]; act = pick[1];
+  }
+
+  const key = map + '|' + name + '|' + act + '|' + (rain ? 'r' : snow ? 's' : '') + '|' + (d.period ? 'p' : '');
+  if (key === lastSceneKey) return;
+  lastSceneKey = key;
+
+  SakuAscii.setScene(name, {
+    map: map, sceneKey: name, night: !!NIGHT_SCENES[sc],
+    rain: rain, snow: snow, period: !!d.period,
+  });
+  SakuAscii.setAction(act);
+}
+
+document.getElementById('pet').addEventListener('click', () => {
+  if (asciiReady) SakuAscii.say(SAYS[Math.floor(Math.random() * SAYS.length)]);
+});
+
+async function initAscii(){
+  const data = window.__SAKU_ASCII_DATA;
+  if (!data) throw new Error('数据未解密');
+  await SakuAscii.init({ host: $('screen'), data: data });
+  asciiReady = true;
+  lastSceneKey = '';
+}
+
 
 /* ---------- 时钟 ---------- */
 function tickClock(){
@@ -259,7 +371,9 @@ var DATA = null;
 function refresh(){
   if (!DATA) return;
   try{
-    renderData(Saku.feed(WORLD_START, new Date(), DATA));
+    var d = Saku.feed(WORLD_START, new Date(), DATA);
+    renderData(d);
+    petState(d);
   }catch(e){ $('nowSub').textContent = '出错了：' + e.message; }
 }
 
@@ -277,6 +391,12 @@ async function tryOpen(password, remember){
   $('go').textContent = '解密中…';
   try{
     var data = await decrypt(password, window.SAKU_ENC);
+    if (window.SAKU_ASCII_ENC) {
+      try {
+        window.__SAKU_ASCII_DATA = await decrypt(password, window.SAKU_ASCII_ENC);
+        if (typeof initAscii === 'function') await initAscii();
+      } catch(e2){}
+    }
     if (remember) { try { localStorage.setItem(STORE_KEY, password); } catch(e){} }
     enter(data);
   }catch(e){
