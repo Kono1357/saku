@@ -197,7 +197,7 @@
     <span class="chip" id="cntChip">—</span>
     <span class="chip" id="bornChip">—</span>
   </div>
-  <button class="game-btn" id="gameBtn">桌游 · 月途</button>
+  <button class="game-btn" id="gameBtn">桌游 · 一页迷宫</button>
 
   <!-- 会动的朔（ASCII 观测窗） -->
   <section class="pet" id="pet">
@@ -226,10 +226,10 @@
 </div>
 
 <!-- 桌游弹层 -->
-<div class="mp-mask" id="mpMask">
-  <div class="mp-panel">
-    <button class="mp-close" id="mpClose">关上</button>
-    <div id="mpHost"></div>
+<div class="mp-mask" id="mazeMask">
+  <div class="maze-panel">
+    <button class="mp-close" id="mazeClose">关上</button>
+    <iframe id="mazeFrame" class="maze-frame" title="一页迷宫"></iframe>
   </div>
 </div>
 
@@ -237,6 +237,7 @@
 <script src="saku-data.enc.js"></script>
 <script src="saku-ascii.enc.js"></script>
 <script src="saku-ascii.js"></script>
+<script src="maze.enc.js"></script>
 <script src="moonpath.js"></script>
 <script src="saku-engine.js"></script>
 <script>
@@ -313,22 +314,32 @@ function petState(d){
     rain: rain, snow: snow, period: !!d.period,
   });
   SakuAscii.setAction(P.act, ACT_CN[P.act] || '');
-  SakuAscii.setTag(P.indoor ? '室内 · ' + P.cn : '城区 · ' + P.cn);
-}
+  SakuAscii.setTag(P.indoor ? '/* ---------- 桌游《一页迷宫》 ---------- */
+let mazeLoaded = false;
+let mazeBusy = false;
 
-/* ---------- 桌游 ---------- */
-let mpInited = false;
-function openGame(){
-  const mask = document.getElementById('mpMask');
+async function openMaze(){
+  const mask = document.getElementById('mazeMask');
   mask.classList.add('on');
-  if (!mpInited) {
-    MoonPath.init({ host: document.getElementById('mpHost') });
-    mpInited = true;
+  if (mazeLoaded || mazeBusy) return;
+  mazeBusy = true;
+  const frame = document.getElementById('mazeFrame');
+  try {
+    if (!window.SAKU_MAZE_ENC) throw new Error('没有桌游数据');
+    const html = await decrypt(window.__SAKU_PW, window.SAKU_MAZE_ENC);
+    frame.srcdoc = html;
+    mazeLoaded = true;
+  } catch (e) {
+    frame.srcdoc = '<body style="background:#2e2822;color:#f3e9d6;font-family:serif;padding:40px">'
+      + '桌游载入失败：' + e.message + '</body>';
   }
+  mazeBusy = false;
 }
-document.getElementById('gameBtn').addEventListener('click', openGame);
-document.getElementById('mpClose').addEventListener('click', () => {
-  document.getElementById('mpMask').classList.remove('on');
+document.getElementById('gameBtn').addEventListener('click', openMaze);
+document.getElementById('mazeClose').addEventListener('click', () => {
+  document.getElementById('mazeMask').classList.remove('on');
+});
+pMask').classList.remove('on');
 });
 
 document.getElementById('pet').addEventListener('click', () => {
@@ -430,6 +441,7 @@ async function tryOpen(password, remember){
   $('err').textContent = '';
   $('go').textContent = '解密中…';
   try{
+    window.__SAKU_PW = password;
     var data = await decrypt(password, window.SAKU_ENC);
     if (window.SAKU_ASCII_ENC) {
       try {
