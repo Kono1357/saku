@@ -2,307 +2,282 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0a0d15">
-<meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#080b14">
 <title>朔</title>
 <style>
-  :root{
-    --bg:#0a0d15; --line:rgba(255,255,255,.09);
-    --fg:#e6ecf7; --dim:#8593ab; --dim2:#5d6a80; --accent:#c9b98f;
-  }
-  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{margin:0;padding:0}
-  body{
-    background:
-      radial-gradient(140% 70% at 82% -8%, #1d2b45 0%, rgba(29,43,69,0) 55%),
-      radial-gradient(90% 50% at 10% 12%, #16203a 0%, rgba(22,32,58,0) 60%),
-      var(--bg);
-    color:var(--fg);
-    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif;
-    font-size:15px; line-height:1.75; min-height:100vh;
-    padding:0 0 env(safe-area-inset-bottom);
-  }
-  .wrap{max-width:680px;margin:0 auto;padding:26px 20px 60px}
-  .hide{display:none !important}
+:root{
+  --bg:#080b14; --card:#141a2a; --card2:#1b2338; --line:rgba(255,255,255,.09);
+  --fg:#e8eef9; --dim:#8695b0; --dim2:#5a6880; --accent:#c9b98f;
+  --red:#c0706a; --green:#7fc79a; --blue:#6fa8dc;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bot:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;height:100%;overflow:hidden}
+body{
+  background:
+    radial-gradient(130% 80% at 80% -10%, #1c2a47 0%, rgba(28,42,71,0) 55%),
+    radial-gradient(100% 60% at 8% 8%, #16203a 0%, rgba(22,32,58,0) 60%),
+    var(--bg);
+  color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif;
+  font-size:15px; line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+.hide{display:none !important}
 
-  /* ---------- 密码门 ---------- */
-  .gate{min-height:82vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
-  .gate .moon{width:56px;height:56px;margin-bottom:18px;opacity:.9}
-  .gate h1{font-size:26px;margin:0;letter-spacing:8px;font-weight:600}
-  .gate p{color:var(--dim2);font-size:12.5px;letter-spacing:1px;margin:10px 0 26px}
-  .gate input{
-    width:100%;max-width:300px;padding:13px 16px;border-radius:12px;
-    border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--fg);
-    font-size:16px;font-family:inherit;outline:none;text-align:center;letter-spacing:1px;
-  }
-  .gate input:focus{border-color:rgba(201,185,143,.45)}
-  .gate button{
-    margin-top:14px;width:100%;max-width:300px;padding:13px;border-radius:12px;
-    border:1px solid rgba(201,185,143,.35);background:rgba(201,185,143,.12);
-    color:#e8dcb4;font-size:15px;font-family:inherit;font-weight:600;cursor:pointer;
-  }
-  .gate button:active{transform:scale(.98)}
-  .gate .err{color:#f0a0a0;font-size:12.5px;margin-top:14px;min-height:18px}
-  .gate .tip{color:var(--dim2);font-size:11.5px;margin-top:20px;line-height:1.9;max-width:300px}
+/* ================= 密码门 ================= */
+#gate{
+  position:fixed; inset:0; z-index:200; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; text-align:center; padding:24px;
+  background:linear-gradient(180deg,#0a0e18,#070a12);
+}
+#gate .moon{width:58px;height:58px;margin-bottom:16px;opacity:.9}
+#gate h1{font-size:26px;margin:0;letter-spacing:8px;font-weight:600}
+#gate p{color:var(--dim2);font-size:12.5px;letter-spacing:1px;margin:10px 0 24px}
+#gate input{
+  width:100%;max-width:300px;padding:14px 16px;border-radius:13px;
+  border:1px solid var(--line);background:rgba(255,255,255,.045);color:var(--fg);
+  font-size:16px;font-family:inherit;outline:none;text-align:center;letter-spacing:1px;
+}
+#gate input:focus{border-color:rgba(201,185,143,.5);background:rgba(255,255,255,.07)}
+#gate button{
+  margin-top:13px;width:100%;max-width:300px;padding:14px;border-radius:13px;
+  border:1px solid rgba(201,185,143,.35);background:rgba(201,185,143,.13);
+  color:#e8dcb4;font-size:15.5px;font-family:inherit;font-weight:600;cursor:pointer;
+}
+#gate button:active{transform:scale(.985);background:rgba(201,185,143,.2)}
+#gate .err{color:#f0a0a0;font-size:12.5px;margin-top:13px;min-height:18px}
+#gate .tip{color:var(--dim2);font-size:11.5px;margin-top:18px;line-height:1.9;max-width:300px}
 
-  /* ---------- 主界面 ---------- */
-  .topbar{display:flex;align-items:flex-start;gap:14px}
-  .clock{margin-left:auto;text-align:right;flex:0 0 auto}
-  .clk-time{font-size:30px;font-weight:600;color:#f0e6c8;letter-spacing:1px;
-            font-variant-numeric:tabular-nums;line-height:1.15}
-  .clk-date{font-size:11.5px;color:var(--dim2);letter-spacing:.5px;margin-top:3px}
-  .clk-dot{display:inline-block;width:6px;height:6px;border-radius:50%;
-           background:#7dd3fc;margin-right:5px;vertical-align:middle;animation:pulse 2s infinite}
-  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
-  .moon{width:44px;height:44px;margin-bottom:14px;opacity:.9}
-  h1{font-size:26px;margin:0;letter-spacing:6px;font-weight:600}
-  .sub{color:var(--dim2);font-size:12px;letter-spacing:1.5px;margin-top:4px}
-  .meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
-  .chip{font-size:12px;color:var(--dim);border:1px solid var(--line);
-        padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.02)}
-  /* ---------- 角色（ASCII 观测窗） ---------- */
-  .pet{margin-top:22px;border-radius:12px;overflow:hidden;position:relative;
-       border:1px solid rgba(255,255,255,.08);background:#080b12}
-  .screen{position:relative;overflow:hidden;padding:8px 6px 30px 8px;
-          font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Courier New",monospace;
-          line-height:1.18;letter-spacing:0;background:#080b12;
-          transition:background .8s}
-  .a-pre{margin:0;white-space:pre;font:inherit;line-height:inherit;
-         transition:filter .8s}
-  .a-actor{position:absolute;font:inherit;line-height:inherit;color:#f2ecdc;
-           text-shadow:0 0 5px rgba(242,236,220,.85);z-index:3}
-  .a-fx{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:2}
-  .a-fx i{position:absolute;top:-10%;font-style:normal;
-          animation-name:a-fall;animation-timing-function:linear;animation-iteration-count:infinite}
-  @keyframes a-fall{from{transform:translateY(0)}to{transform:translateY(360px)}}
-  .a-say{position:absolute;left:8px;right:8px;bottom:5px;z-index:4;
-         font-family:-apple-system,"PingFang SC","Noto Sans SC",sans-serif;
-         font-size:12px;line-height:1.5;color:#c9b98f;
-         background:rgba(10,14,22,.88);border:1px solid rgba(201,185,143,.22);
-         border-radius:7px;padding:4px 9px}
-  .a-tag{position:absolute;left:8px;top:4px;z-index:5;pointer-events:none;
-         font-family:-apple-system,"PingFang SC",sans-serif;font-size:10px;letter-spacing:1px;
-         color:#8ea0bd;background:rgba(8,11,18,.82);border:1px solid rgba(142,160,189,.22);
-         border-radius:5px;padding:1px 6px;opacity:.9}
-  .screen.is-world .a-pre{filter:saturate(.95)}
-  .screen.is-night .a-pre{filter:brightness(.66) saturate(.72) hue-rotate(-8deg)}
-  .screen.is-period .a-pre{filter:brightness(.92) saturate(.8) sepia(.18)}
+/* ================= 桌面 ================= */
+#home{
+  position:fixed; inset:0; display:flex; flex-direction:column;
+  padding:calc(var(--safe-top) + 14px) 20px calc(var(--safe-bot) + 14px);
+  transition:opacity .3s, transform .34s cubic-bezier(.3,.9,.3,1), filter .3s;
+}
+#home.push{opacity:0; transform:scale(.94); filter:blur(3px)}
 
-  /* ---------- 桌游入口 ---------- */
-  .game-btn{display:inline-flex;align-items:center;gap:6px;margin-top:14px;
-            border:1px solid rgba(201,185,143,.32);background:rgba(201,185,143,.10);
-            color:#e8dcb4;font-size:12.5px;font-family:inherit;letter-spacing:1px;
-            border-radius:999px;padding:6px 15px;cursor:pointer}
-  .game-btn:active{transform:scale(.97);background:rgba(201,185,143,.18)}
-  /* ---------- 桌游弹层：全屏铺满 ---------- */
-  .mp-mask{position:fixed;inset:0;z-index:60;display:none;overflow:hidden;
-           background:#2e2822;padding:0}
-  .mp-mask.on{display:block}
-  .maze-panel{position:absolute;inset:0;width:100%;height:100%;max-width:none;margin:0;
-              border:0;border-radius:0;background:#2e2822;padding:0}
-  .maze-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;
-              background:#2e2822}
-  .mp-close{position:absolute;right:12px;top:12px;z-index:10;
-            border:2px solid rgba(91,70,50,.7);background:rgba(255,253,247,.94);
-            color:#5b4632;font-size:13px;font-family:inherit;border-radius:999px;
-            padding:7px 16px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.35)}
-  .mp-close:active{transform:scale(.96)}
-  .now{margin-top:24px;border-radius:16px;padding:18px 18px 8px;
-       border:1px solid rgba(201,185,143,.28);
-       background:linear-gradient(180deg,rgba(201,185,143,.10),rgba(201,185,143,.02));
-       box-shadow:0 10px 30px rgba(0,0,0,.25)}
-  .nowtop{display:flex;align-items:baseline;gap:10px;margin-bottom:4px}
-  .nowlabel{font-size:11.5px;letter-spacing:3px;color:var(--accent)}
-  .nowtime{margin-left:auto;font-size:22px;font-weight:600;color:#f0e6c8;
-           font-variant-numeric:tabular-nums;letter-spacing:1px}
-  .nowsub{font-size:12px;color:var(--dim2);margin-bottom:12px}
-  .now ul{list-style:none;margin:0;padding:0}
-  .now li{display:flex;gap:13px;padding:9px 0;border-top:1px solid rgba(255,255,255,.06)}
-  .now .t{flex:0 0 46px;color:#9d8f68;font-size:12.5px;font-variant-numeric:tabular-nums;padding-top:3px}
-  .now .x{margin:0;flex:1;color:#f2ecdc}
-  .arch{margin-top:30px}
-  .archlabel{font-size:11.5px;letter-spacing:3px;color:var(--dim2);margin-bottom:12px}
-  .day{margin-bottom:9px;border:1px solid var(--line);border-radius:13px;overflow:hidden;
-       background:rgba(255,255,255,.018)}
-  .dayhead{display:flex;align-items:center;gap:10px;cursor:pointer;
-           padding:12px 15px;font-size:13.5px;color:var(--dim);user-select:none}
-  .dayhead .wd{color:var(--dim2);font-size:12px}
-  .dayhead .tag{font-size:11px;color:var(--accent);border:1px solid rgba(201,185,143,.3);
-                border-radius:999px;padding:1px 7px}
-  .dayhead .n{margin-left:auto;color:var(--dim2);font-size:12px}
-  .dayhead .arrow{color:var(--dim2);font-size:10px;transition:transform .2s}
-  .day.open .dayhead .arrow{transform:rotate(90deg)}
-  .day.open .dayhead{color:var(--accent)}
-  ul.items{list-style:none;margin:0;padding:0 15px;display:none}
-  .day.open ul.items{display:block;padding-bottom:8px}
-  ul.items li{display:flex;gap:14px;padding:10px 0;border-top:1px solid rgba(255,255,255,.045)}
-  ul.items .t{flex:0 0 46px;color:var(--dim2);font-size:12.5px;
-              font-variant-numeric:tabular-nums;padding-top:3px}
-  ul.items .x{margin:0;flex:1;color:#dfe6f2}
-  .night .x{color:#c3cddd}
-  footer{margin-top:34px;padding-top:20px;border-top:1px solid var(--line);
-         color:var(--dim2);font-size:12px;line-height:1.9}
-  .lockline{margin-top:10px}
-  .lockline a{color:var(--dim2);text-decoration:underline;cursor:pointer}
+/* 状态栏 */
+.statusbar{display:flex; align-items:flex-end; gap:12px; margin-bottom:26px}
+.statusbar .clockbig{
+  font-size:44px; font-weight:300; letter-spacing:1px; line-height:1;
+  font-variant-numeric:tabular-nums; color:#f2f6ff;
+}
+.statusbar .right{margin-left:auto; text-align:right}
+.statusbar .date{font-size:12px; color:var(--dim); letter-spacing:.5px}
+.statusbar .where{
+  font-size:12px; color:var(--accent); margin-top:3px; letter-spacing:.5px;
+  display:flex; align-items:center; gap:5px; justify-content:flex-end;
+}
+.dot{width:6px;height:6px;border-radius:50%;background:#7dd3fc;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+
+/* 图标网格 */
+.grid{
+  display:grid; gap:22px 16px;
+  grid-template-columns:repeat(auto-fill,minmax(78px,1fr));
+  align-content:start;
+}
+.app{
+  display:flex; flex-direction:column; align-items:center; gap:8px;
+  cursor:pointer; user-select:none;
+  transition:transform .16s cubic-bezier(.3,1.4,.5,1), opacity .3s;
+}
+.app:active{transform:scale(.9)}
+.app.zooming{opacity:0}
+.app .ico{
+  width:62px;height:62px;border-radius:17px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:27px; line-height:1;
+  border:1px solid rgba(255,255,255,.13);
+  box-shadow:0 6px 16px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.12);
+  background:linear-gradient(165deg,#242c44,#161c2c);
+  transition:transform .22s cubic-bezier(.3,1.5,.5,1), box-shadow .22s;
+}
+.app.opening .ico{transform:scale(1.18); box-shadow:0 10px 26px rgba(0,0,0,.5)}
+.app .nm{font-size:11.5px; color:var(--dim); letter-spacing:.5px; white-space:nowrap}
+.app[data-app="now"] .ico{background:linear-gradient(165deg,#2a3350,#1a2136)}
+.app[data-app="archive"] .ico{background:linear-gradient(165deg,#2b3040,#1a1d29)}
+.app[data-app="game"] .ico{background:linear-gradient(165deg,#3a2b2b,#241a1a)}
+.app[data-app="rules"] .ico{background:linear-gradient(165deg,#26362c,#17211c)}
+.app[data-app="about"] .ico{background:linear-gradient(165deg,#2d2a3c,#1b1926)}
+.app .badge{
+  position:absolute; margin:-42px 0 0 44px; min-width:17px; height:17px; padding:0 4px;
+  border-radius:9px; background:var(--red); color:#fff; font-size:10.5px;
+  display:flex; align-items:center; justify-content:center; line-height:1;
+}
+
+/* Dock */
+.dock{
+  margin-top:auto; display:flex; justify-content:center; gap:8px; padding-top:18px;
+}
+.dock i{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.25)}
+.dock i.on{background:rgba(255,255,255,.6)}
+
+/* ================= App 视图 ================= */
+#viewHost{
+  position:fixed; inset:0; z-index:100; display:flex; flex-direction:column;
+  background:
+    radial-gradient(120% 70% at 80% -8%, #1a2743 0%, rgba(26,39,67,0) 55%),
+    var(--bg);
+  opacity:0; transform:scale(.9); pointer-events:none;
+  transition:opacity .26s ease, transform .34s cubic-bezier(.2,.9,.25,1);
+  transform-origin:50% 50%;
+}
+#viewHost.on{opacity:1; transform:scale(1); pointer-events:auto}
+.view-bar{
+  display:flex; align-items:center; gap:12px; flex:0 0 auto;
+  padding:calc(var(--safe-top) + 12px) 16px 12px;
+  border-bottom:1px solid var(--line);
+  background:rgba(10,14,24,.72); backdrop-filter:blur(12px);
+}
+.view-bar .back{
+  border:1px solid var(--line); background:rgba(255,255,255,.05); color:var(--fg);
+  font-size:13.5px; font-family:inherit; border-radius:999px; padding:6px 14px; cursor:pointer;
+}
+.view-bar .back:active{background:rgba(255,255,255,.12)}
+.view-bar .vt{font-size:15px; letter-spacing:2px; color:var(--accent); font-weight:600}
+.view-body{
+  flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  padding:18px 18px calc(var(--safe-bot) + 40px);
+}
+.view-body.short{overflow:hidden; padding:0}
+
+/* 视图内元素 */
+.card{
+  border:1px solid var(--line); border-radius:15px; padding:16px;
+  background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.015));
+  margin-bottom:14px;
+}
+.card.hl{
+  border-color:rgba(201,185,143,.3);
+  background:linear-gradient(180deg,rgba(201,185,143,.11),rgba(201,185,143,.025));
+}
+.card h3{margin:0 0 10px; font-size:13px; letter-spacing:2px; color:var(--accent); font-weight:600}
+.card .big{font-size:22px; font-weight:600; color:#f2ecdc; letter-spacing:1px; margin-bottom:4px}
+.card .sub{font-size:12.5px; color:var(--dim2)}
+.card p{margin:8px 0; font-size:14px; color:#dfe6f2}
+
+ul.items{list-style:none;margin:0;padding:0}
+ul.items li{display:flex;gap:14px;padding:11px 0;border-top:1px solid rgba(255,255,255,.055)}
+ul.items li:first-child{border-top:none}
+ul.items .t{flex:0 0 44px;color:#9d8f68;font-size:12.5px;font-variant-numeric:tabular-nums;padding-top:3px}
+ul.items .x{margin:0;flex:1;color:#dfe6f2;font-size:14.5px}
+ul.items li.night .x{color:#b9c5d8}
+
+.day{margin-bottom:9px;border:1px solid var(--line);border-radius:13px;overflow:hidden;
+     background:rgba(255,255,255,.02)}
+.dayhead{display:flex;align-items:center;gap:10px;cursor:pointer;
+         padding:13px 15px;font-size:13.5px;color:var(--dim);user-select:none}
+.dayhead .arrow{color:var(--dim2);font-size:10px;transition:transform .22s}
+.day.open .dayhead .arrow{transform:rotate(90deg)}
+.day.open .dayhead{color:var(--accent)}
+.dayhead .tag{font-size:11px;color:var(--accent);border:1px solid rgba(201,185,143,.3);
+              border-radius:999px;padding:1px 8px}
+.dayhead .n{margin-left:auto;color:var(--dim2);font-size:12px}
+.day ul.items{display:none;padding:0 15px 8px}
+.day.open ul.items{display:block}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.chip{font-size:12px;color:var(--dim);border:1px solid var(--line);
+      padding:5px 11px;border-radius:999px;background:rgba(255,255,255,.025)}
+
+/* 桌游视图 */
+.game-shell{position:absolute;inset:0;display:flex;flex-direction:column}
+.game-frame{flex:1;width:100%;border:0;background:#2e2822;display:block}
+
+/* 列表式入口（规则/关于） */
+.doc{font-size:14.5px;line-height:1.95;color:#cdd7e8}
+.doc h4{margin:20px 0 8px;font-size:14px;letter-spacing:1.5px;color:var(--accent)}
+.doc h4:first-child{margin-top:0}
+.doc p{margin:8px 0}
+.doc ul{margin:8px 0;padding-left:20px}
+.doc li{margin:5px 0}
+.doc b{color:#f2ecdc}
+.doc code{background:rgba(255,255,255,.07);padding:1px 6px;border-radius:5px;font-size:13px}
+
+.empty{color:var(--dim2);font-size:13.5px;padding:14px 0}
+.center{text-align:center;padding:30px 0;color:var(--dim2);font-size:13.5px}
+
+/* 桌面淡入 */
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.app{animation:fadeUp .42s backwards}
+.app:nth-child(1){animation-delay:.02s}
+.app:nth-child(2){animation-delay:.06s}
+.app:nth-child(3){animation-delay:.1s}
+.app:nth-child(4){animation-delay:.14s}
+.app:nth-child(5){animation-delay:.18s}
+.app:nth-child(6){animation-delay:.22s}
 </style>
 </head>
 <body>
 
 <!-- ================= 密码门 ================= -->
-<div class="wrap gate" id="gate">
+<div id="gate">
   <svg class="moon" viewBox="0 0 48 48" fill="none" aria-hidden="true">
     <path d="M30 6a18 18 0 1 0 12 30 15 15 0 0 1-12-30Z" fill="#c9b98f" opacity=".85"/>
   </svg>
   <h1>朔</h1>
-  <p>这个世界是加密的</p>
-  <input id="pw" type="password" placeholder="请输入密码" autocomplete="current-password" inputmode="text">
+  <p id="gateSub">这个世界是加密的</p>
+  <input id="pw" type="password" placeholder="请输入密码" autocomplete="current-password">
   <button id="go">进入</button>
   <div class="err" id="err"></div>
-  <div class="tip">没有密码只能看到密文。<br>勾选浏览器的「记住密码」，之后打开就不用再输。</div>
+  <div class="tip">没有密码只能看到密文。<br>进入后会记住，之后打开直接进。</div>
 </div>
 
-<!-- ================= 主界面 ================= -->
-<div class="wrap hide" id="main">
-  <div class="topbar">
-    <div>
-      <svg class="moon" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-        <path d="M30 6a18 18 0 1 0 12 30 15 15 0 0 1-12-30Z" fill="#c9b98f" opacity=".85"/>
-      </svg>
-      <h1>朔</h1>
-      <div class="sub">现实时间同步 · 只读观察窗口</div>
-    </div>
-    <div class="clock">
-      <div class="clk-time" id="clkTime">--:--:--</div>
-      <div class="clk-date" id="clkDate"><span class="clk-dot"></span>—</div>
+<!-- ================= 桌面 ================= -->
+<div id="home" class="hide">
+  <div class="statusbar">
+    <div class="clockbig" id="clkBig">--:--</div>
+    <div class="right">
+      <div class="date" id="clkDate">—</div>
+      <div class="where"><span class="dot"></span><span id="clkWhere">接入中</span></div>
     </div>
   </div>
+  <div class="grid" id="grid"></div>
+  <div class="dock"><i class="on"></i><i></i></div>
+</div>
 
-  <div class="meta">
-    <span class="chip" id="wxChip">—</span>
-    <span class="chip" id="cntChip">—</span>
-    <span class="chip" id="bornChip">—</span>
+<!-- ================= App 视图 ================= -->
+<div id="viewHost">
+  <div class="view-bar">
+    <button class="back" id="viewBack">← 返 回</button>
+    <span class="vt" id="viewTitle">现在</span>
   </div>
-  <button class="game-btn" id="gameBtn">桌游 · 一页迷宫</button>
-
-  <!-- 会动的朔（ASCII 观测窗） -->
-  <section class="pet" id="pet">
-    <div class="screen" id="screen"></div>
-  </section>
-
-  <section class="now">
-    <div class="nowtop">
-      <span class="nowlabel">现在</span>
-      <span class="nowtime" id="nowTime">--:--</span>
-    </div>
-    <div class="nowsub" id="nowSub">—</div>
-    <ul id="nowList"></ul>
-  </section>
-
-  <section class="arch">
-    <div class="archlabel">归档 · 按日期收起</div>
-    <div id="days"></div>
-  </section>
-
-  <footer>
-    <div>这个世界与现实时间 1:1 同步运行。你不在的时候，它不会暂停。</div>
-    <div>每条记录由时间确定性生成：同一时刻，永远是同一段经历。</div>
-    <div class="lockline"><a id="lock">锁定并清除本机密码</a></div>
-  </footer>
+  <div class="view-body" id="viewBody"></div>
 </div>
-
-<!-- 桌游弹层 -->
-<div class="mp-mask" id="mazeMask">
-  <div class="maze-panel">
-    <button class="mp-close" id="mazeClose">关上</button>
-    <iframe id="mazeFrame" class="maze-frame" title="一页迷宫"></iframe>
-</div>
-</div>
-
 
 <script src="saku-data.enc.js"></script>
 <script src="saku-ascii.enc.js"></script>
-<script src="saku-ascii.js"></script>
 <script src="maze.enc.js"></script>
-<script src="saku-engine.js"></script>
 <script>
-/* 世界设定 —— 改这里可以换一条世界线 */
-var WORLD_START = {
-  date:  new Date(2026, 8, 19, 0, 0, 0),   // 2026-09-19 00:00
-  anchor:new Date(2026, 8, 8, 0, 0, 0),    // 生理周期锚点
-  seed:  20260919
-};
-var NOW_COUNT = 3;
-var STORE_KEY = 'saku_pw';
+/* =====================================================================
+   朔 · 观察窗口（手机桌面风格）
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+const IS_DEPLOY = true;
+const STORE_KEY = 'saku_pw';
 
-function $(id){ return document.getElementById(id); }
+const APPS = [
+  {id:'now',     ico:'◉', name:'现在'},
+  {id:'archive', ico:'▤', name:'归档'},
+  {id:'game',    ico:'⚄', name:'桌游'},
+  {id:'rules',   ico:'❖', name:'规则'},
+  {id:'about',   ico:'◌', name:'关于'},
+];
+
+let DATA = null, PLAN = null, PLACES = null, VIEW = null, clockSkew = 0;
+let DATA_RAW = null;
+
+/* ---------- 工具 ---------- */
 function pad(n){ return n < 10 ? '0' + n : '' + n; }
 function b64buf(b64){
   var bin = atob(b64), len = bin.length, arr = new Uint8Array(len);
   for (var i = 0; i < len; i++) arr[i] = bin.charCodeAt(i);
   return arr;
 }
-
-/* ---------- 解密 ---------- */
-async function decrypt(password, enc){
-  var material = await crypto.subtle.importKey(
-    'raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
-  var key = await crypto.subtle.deriveKey(
-    { name:'PBKDF2', salt: b64buf(enc.salt), iterations: 250000, hash:'SHA-256' },
-    material, { name:'AES-GCM', length:256 }, false, ['decrypt']);
-
-  var ct = b64buf(enc.ct), tag = b64buf(enc.tag);
-  var joined = new Uint8Array(ct.length + tag.length);
-  joined.set(ct, 0); joined.set(tag, ct.length);
-
-  var plain = await crypto.subtle.decrypt(
-    { name:'AES-GCM', iv: b64buf(enc.iv) }, key, joined);
-  return JSON.parse(new TextDecoder().decode(plain));
-}
-
-/* ---------- 会动的朔（画面由生活轨迹表驱动，与文字报告同源） ---------- */
-const SAYS = [
-  '……没什么，一般。',
-  '嗯，没事。我一个人就可以了。',
-  '（掷了一下骰子）……唔。今天是这样啊。',
-  '真好啊（小声），那就先这样吧。',
-  '麻烦。不喜欢。讨厌。好烦。',
-  '……你也在这儿啊。',
-];
-
-let asciiReady = false;
-let lastSceneKey = '';
-
-const ACT_CN = {
-  idle:'站着，没什么表情', sleep:'睡着了', walk:'在走', study:'低头写着什么',
-  eat:'在吃东西', read:'在看书', bath:'在洗漱', shop:'在挑东西', wait:'在等车',
-  play:'在操场边上', cook:'在煮东西', phone:'在看手机',
-};
-
-function petState(d){
-  if (!asciiReady || !SakuAscii.placeAt) return;
-  if (!lastClock) return;
-  const P = SakuAscii.placeAt(lastClock);
-  if (!P) return;
-
-  const rain = /雨/.test(d.weather || '');
-  const snow = /雪/.test(d.weather || '');
-  const key = [P.place, P.scene, P.act, rain ? 'r' : snow ? 's' : '', d.period ? 'p' : ''].join('|');
-  if (key === lastSceneKey) return;
-  lastSceneKey = key;
-
-  SakuAscii.setScene(P.room, {
-    map: P.indoor ? 'room' : 'world',
-    sceneKey: P.place,
-    xy: P.xy,
-    night: P.scene === 'sleep' || P.scene === 'night',
-    rain: rain, snow: snow, period: !!d.period,
-  });
-  SakuAscii.setAction(P.act, ACT_CN[P.act] || '');
-  SakuAscii.setTag(P.indoor ? '室内 · ' + P.cn : '城区 · ' + P.cn);
-}
-
-/* 纯文本解密：不动 JSON（桌游是整页 HTML，不能 parse） */
 async function decryptRaw(password, enc){
   var material = await crypto.subtle.importKey(
     'raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
@@ -315,164 +290,298 @@ async function decryptRaw(password, enc){
   var plain = await crypto.subtle.decrypt({ name:'AES-GCM', iv: b64buf(enc.iv) }, key, joined);
   return new TextDecoder().decode(plain);
 }
+async function decryptJSON(password, enc){
+  return JSON.parse(await decryptRaw(password, enc));
+}
 
-/* ---------- 桌游《一页迷宫》 ---------- */
-let mazeLoaded = false;
-let mazeBusy = false;
-
-async function openMaze(){
-  const mask = document.getElementById('mazeMask');
-  mask.classList.add('on');
-  if (mazeLoaded || mazeBusy) return;
-  mazeBusy = true;
-  const frame = document.getElementById('mazeFrame');
-  try {
-    if (!window.SAKU_MAZE_ENC) throw new Error('没有桌游数据');
-    if (!window.__SAKU_PW) throw new Error('还没解锁（先在密码门进入一次）');
-    const html = await decryptRaw(window.__SAKU_PW, window.SAKU_MAZE_ENC);
-    frame.srcdoc = html;
-    mazeLoaded = true;
-  } catch (e) {
-    frame.srcdoc = '<body style="background:#2e2822;color:#f3e9d6;font-family:serif;padding:40px">'
-      + '桌游载入失败：' + e.message + '</body>';
+/* ---------- 朔在哪 ---------- */
+function placeAt(date){
+  if(!PLAN || !PLACES) return null;
+  var plan = (date.getDay() === 0 || date.getDay() === 6) ? PLAN.weekend : PLAN.weekday;
+  if(!plan || !plan.length) return null;
+  var m = date.getHours() * 60 + date.getMinutes();
+  var hit = plan[plan.length - 1];
+  for(var i = 0; i < plan.length; i++){
+    var a = plan[i][0].split(':'), b = plan[i][1].split(':');
+    if((+a[0])*60 + (+a[1]) <= m && m < (+b[0])*60 + (+b[1])){ hit = plan[i]; break; }
   }
-  mazeBusy = false;
+  var p = PLACES[hit[2]] || ['bedroom', true, '卧室'];
+  return { place:hit[2], scene:hit[3], act:hit[4], room:p[0], indoor:!!p[1], cn:p[2] };
 }
-document.getElementById('gameBtn').addEventListener('click', openMaze);
-document.getElementById('mazeClose').addEventListener('click', () => {
-  document.getElementById('mazeMask').classList.remove('on');
-});
-
-document.getElementById('pet').addEventListener('click', () => {
-  if (asciiReady) SakuAscii.say(SAYS[Math.floor(Math.random() * SAYS.length)]);
-});
-
-async function initAscii(){
-  const data = window.__SAKU_ASCII_DATA;
-  if (!data) throw new Error('数据未解密');
-  await SakuAscii.init({ host: $('screen'), data: data });
-  asciiReady = true;
-  lastSceneKey = '';
-  if (typeof pull === 'function') pull();
-}
-
+const ACT_CN = {
+  idle:'没什么表情地站着', sleep:'睡着了', walk:'在走', study:'低头写着什么',
+  eat:'在吃东西', read:'在看书', bath:'在洗漱', shop:'在挑东西', wait:'在等车',
+  play:'在操场边上', cook:'在煮东西', phone:'在看手机',
+};
 
 /* ---------- 时钟 ---------- */
-var lastClock = new Date();
 function tickClock(){
-  var d = new Date();
-  lastClock = d;
-  $('clkTime').textContent = pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
-  $('clkDate').innerHTML = '<span class="clk-dot"></span>'
-    + d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  var d = new Date(Date.now() + clockSkew);
+  $('clkBig').textContent = pad(d.getHours()) + ':' + pad(d.getMinutes());
+  var wk = ['日','一','二','三','四','五','六'][d.getDay()];
+  $('clkDate').textContent = (d.getMonth()+1) + '月' + d.getDate() + '日 周' + wk;
+  var P = placeAt(d);
+  $('clkWhere').textContent = P ? (P.cn + ' · ' + (ACT_CN[P.act] || '')) : '—';
+  if(VIEW === 'now') renderNow();
 }
 setInterval(tickClock, 1000);
 
-/* ---------- 渲染 ---------- */
-function fmtDay(iso){
-  var p = iso.split('-').map(Number);
-  var today = new Date(); today.setHours(0,0,0,0);
-  var diff = Math.round((today - new Date(p[0], p[1]-1, p[2]))/86400000);
-  var name = p[1]+'月'+p[2]+'日';
-  if (new Date().getFullYear() !== p[0]) name = p[0]+'年'+name;
-  return { name:name, tag: diff===0?'今天':diff===1?'昨天':diff===2?'前天':'' };
+/* ---------- 视图切换 ---------- */
+function showView(id, originEl){
+  VIEW = id;
+  var host = $('viewHost'), body = $('viewBody');
+  $('viewTitle').textContent = (APPS.find(a => a.id === id) || {}).name || id;
+
+  if(originEl){
+    var r = originEl.getBoundingClientRect();
+    host.style.transformOrigin = (r.left + r.width/2) + 'px ' + (r.top + r.height/2) + 'px';
+  } else {
+    host.style.transformOrigin = '50% 50%';
+  }
+
+  body.classList.remove('short');
+  if(id === 'now') renderNow();
+  else if(id === 'archive') renderArchive();
+  else if(id === 'rules') renderRules();
+  else if(id === 'about') renderAbout();
+  else if(id === 'game'){
+    body.innerHTML = '<div class="game-shell"><iframe class="game-frame" id="gameFrame" title="一页迷宫"></iframe></div>';
+    body.classList.add('short');
+    openGame();
+  }
+
+  $('home').classList.add('push');
+  requestAnimationFrame(() => host.classList.add('on'));
 }
-function isNight(t){ var h = parseInt(t.slice(0,2),10); return h < 6 || h >= 22; }
+function closeView(){
+  var host = $('viewHost');
+  host.classList.remove('on');
+  setTimeout(() => {
+    $('home').classList.remove('push');
+    VIEW = null;
+    $('viewBody').innerHTML = '';
+  }, 300);
+}
+
+/* ---------- 现在 ---------- */
 function line(t, text){
-  var li = document.createElement('li');
-  if (isNight(t)) li.className = 'night';
-  var a = document.createElement('span'); a.className='t'; a.textContent=t;
-  var b = document.createElement('p'); b.className='x'; b.textContent=text;
+  const li = document.createElement('li');
+  const h = parseInt(t.slice(0,2), 10);
+  if(h < 6 || h >= 22) li.className = 'night';
+  const a = document.createElement('span'); a.className = 't'; a.textContent = t;
+  const b = document.createElement('p'); b.className = 'x'; b.textContent = text;
   li.appendChild(a); li.appendChild(b);
   return li;
 }
-function renderData(d){
-  $('wxChip').textContent = '天气 ' + d.weather;
-  $('cntChip').textContent = '已记录 ' + d.total + ' 条';
-  $('bornChip').textContent = '世界起点 ' + d.bornAt;
-
-  var days = d.days || [];
+function renderNow(){
+  if(!DATA || VIEW !== 'now') return;
+  var body = $('viewBody');
+  var days = DATA.days || [];
   var latest = days.length ? days[days.length-1] : null;
-  $('nowTime').textContent = latest && latest.items.length
-    ? latest.items[latest.items.length-1].time : '--:--';
-  $('nowSub').textContent = latest ? ('最近一次记录 · ' + latest.date + ' ' + latest.weekday) : '还没有记录';
+  var P = placeAt(new Date(Date.now() + clockSkew));
+  var recent = [];
+  if(latest) recent = latest.items.slice(-4);
 
-  var nl = $('nowList'); nl.innerHTML = '';
-  if (latest) latest.items.slice(-NOW_COUNT).forEach(function(it){ nl.appendChild(line(it.time, it.text)); });
+  var html = '';
+  if(P){
+    html += '<div class="card hl">'
+      + '<h3>此刻</h3>'
+      + '<div class="big">' + P.cn + '</div>'
+      + '<div class="sub">朔' + (ACT_CN[P.act] || '在这里') + (P.indoor ? '（室内）' : '（外面）') + '</div>'
+      + '</div>';
+  }
+  html += '<div class="card"><h3>最近发生的</h3><ul class="items" id="nowList"></ul></div>';
+  if(DATA.meta) html += '<div class="card"><h3>这个世界</h3><p>' + DATA.meta + '</p></div>';
 
-  var box = $('days'); box.innerHTML = '';
-  if (!days.length){ box.innerHTML = '<div class="loading">还没有记录。</div>'; return; }
+  body.innerHTML = html;
+  var ul = $('nowList');
+  if(recent.length) recent.forEach(it => ul.appendChild(line(it.time, it.text)));
+  else ul.innerHTML = '<li><p class="x empty">还没有记录。</p></li>';
+  tickClock();
+}
+
+/* ---------- 归档 ---------- */
+function fmtDay(iso){
+  var p = iso.split('-').map(Number);
+  var today = new Date(); today.setHours(0,0,0,0);
+  var diff = Math.round((today - new Date(p[0], p[1]-1, p[2])) / 86400000);
+  var name = p[1] + '月' + p[2] + '日';
+  if(new Date().getFullYear() !== p[0]) name = p[0] + '年' + name;
+  return { name, tag: diff === 0 ? '今天' : diff === 1 ? '昨天' : diff === 2 ? '前天' : '' };
+}
+function renderArchive(){
+  if(!DATA) return;
+  var body = $('viewBody');
+  var days = DATA.days || [];
+  if(!days.length){ body.innerHTML = '<div class="empty">还没有记录。</div>'; return; }
+  body.innerHTML = '<div class="chips">' + days.slice().reverse().slice(0,7).map(d =>
+      '<span class="chip">' + fmtDay(d.date).name + ' · ' + d.items.length + ' 条</span>').join('') + '</div>'
+    + '<div id="days"></div>';
+  var box = $('days');
   days.slice().reverse().forEach(function(day){
     var lab = fmtDay(day.date);
-    var sec = document.createElement('section'); sec.className='day';
-    var head = document.createElement('div'); head.className='dayhead';
-    head.innerHTML = '<span class="arrow">▶</span><span>'+lab.name+'</span>'
-      + '<span class="wd">'+day.weekday+'</span>'
-      + (lab.tag ? '<span class="tag">'+lab.tag+'</span>' : '')
-      + '<span class="n">'+day.items.length+' 条</span>';
-    head.addEventListener('click', function(){ sec.classList.toggle('open'); });
+    var sec = document.createElement('section'); sec.className = 'day';
+    var head = document.createElement('div'); head.className = 'dayhead';
+    head.innerHTML = '<span class="arrow">▶</span><span>' + lab.name + '</span>'
+      + '<span style="color:var(--dim2);font-size:12px">' + day.weekday + '</span>'
+      + (lab.tag ? '<span class="tag">' + lab.tag + '</span>' : '')
+      + '<span class="n">' + day.items.length + ' 条</span>';
+    head.addEventListener('click', () => sec.classList.toggle('open'));
     sec.appendChild(head);
-    var ul = document.createElement('ul'); ul.className='items';
-    day.items.forEach(function(it){ ul.appendChild(line(it.time, it.text)); });
+    var ul = document.createElement('ul'); ul.className = 'items';
+    day.items.forEach(it => ul.appendChild(line(it.time, it.text)));
     sec.appendChild(ul);
     box.appendChild(sec);
   });
 }
 
-var DATA = null;
-function refresh(){
-  if (!DATA) return;
-  try{
-    var d = Saku.feed(WORLD_START, new Date(), DATA);
-    renderData(d);
-    petState(d);
-  }catch(e){ $('nowSub').textContent = '出错了：' + e.message; }
+/* ---------- 规则 ---------- */
+const RULES = `
+<div class="card"><h3>这个世界</h3>
+<p>朔，16 岁，高二，独居。现实世界，没有超自然的东西。</p>
+<p>她的时间和你的时间<b>一比一同步</b>。你不看的时候，她也在继续过。每次你打开，看到的是她这段时间里确实经历过的事。</p>
+<p>每一段经历由时间<b>确定性生成</b>——同一个时刻，永远对应同一段文字。刷新不会变，明天再看昨天也不会变。</p>
+</div>
+<div class="card"><h3>她的一天</h3>
+<p>工作日早上 6:20 醒，洗漱、吃早饭、7:44 出门，8:26 到教室；中午在食堂吃、去图书室待一节课；下午放学 16:48 往回走，17:30 到家；晚上写作业到 21:05，洗漱，看会儿手机，22:45 睡。</p>
+<p>周末会赖床、洗衣服、去书店和便利店，下午去公园，晚上在天台待一会儿。</p>
+<p>页面左上角一直显示她此刻在哪、在做什么。</p>
+</div>
+<div class="card"><h3>你可以做什么</h3>
+<p>看。就这样。</p>
+<p>这是一个<b>只读观察窗口</b>——你不能干预她，不能给她留言，不能改变任何事。你只是一个偶尔来看一眼的人。</p>
+<p>唯一的例外是「桌游」：《一页迷宫》是她自己在纸上画的单人游戏，你可以坐下陪她玩一局。</p>
+</div>
+<div class="card"><h3>关于内容</h3>
+<p>她会累、会烦、会难过，也会有身体上的不适。这些都会照实写。</p>
+<p>但只写<b>感受的重量</b>，不写露骨的细节。留白的地方就是留白。</p>
+</div>
+`;
+
+/* ---------- 关于 ---------- */
+function renderAbout(){
+  var P = placeAt(new Date(Date.now() + clockSkew));
+  var born = DATA && DATA.bornAt ? DATA.bornAt : '—';
+  var total = DATA && DATA.total ? DATA.total : 0;
+  $('viewBody').innerHTML = `
+  <div class="card hl">
+    <h3>朔</h3>
+    <div class="big">Saku</div>
+    <div class="sub">这个世界从 ${born} 开始</div>
+  </div>
+  <div class="card"><h3>现在</h3>
+    <p>此刻她在<b>${P ? P.cn : '——'}</b>${P ? '，' + (ACT_CN[P.act] || '') : ''}。</p>
+    <p>累计记录 ${total} 条。</p>
+  </div>
+  <div class="card"><h3>她的随身物件</h3>
+    <p>左手腕一圈白玉菩提根手串，已经氧化开片了。口袋里一枚六面骰子，做不了决定的时候会掷一下。</p>
+    <p>手机壁纸是夜空里一弯细月。</p>
+  </div>
+  <div class="card"><h3>技术</h3>
+    <p>所有数据 AES-256-GCM 加密存在这个页面里，密码只在你手上。这个世界不依赖任何服务器——它靠现实时间算出来。</p>
+    <p style="color:var(--dim2);font-size:12.5px">界面是手机桌面式的：想看什么点开什么，左上角的时钟和「她此刻在哪」会一直更新。</p>
+  </div>
+  <div class="card"><h3>锁定</h3>
+    <p><a id="lockLink" style="color:var(--blue);cursor:pointer">清除本机记住的密码</a></p>
+  </div>`;
+  var lk = $('lockLink');
+  if(lk) lk.onclick = () => { try{ localStorage.removeItem(STORE_KEY); }catch(e){} location.reload(); };
 }
 
-function enter(data){
-  DATA = data;
-  $('gate').classList.add('hide');
-  $('main').classList.remove('hide');
-  tickClock(); refresh();
-  setInterval(refresh, 60000);
-  document.addEventListener('visibilitychange', function(){ if(!document.hidden){ tickClock(); refresh(); } });
-}
-
-async function tryOpen(password, remember){
-  $('err').textContent = '';
-  $('go').textContent = '解密中…';
+/* ---------- 桌游 ---------- */
+async function openGame(){
+  var frame = $('gameFrame');
+  if(!frame) return;
   try{
-    window.__SAKU_PW = password;
-    var data = await decrypt(password, window.SAKU_ENC);
-    if (window.SAKU_ASCII_ENC) {
-      try {
-        window.__SAKU_ASCII_DATA = await decrypt(password, window.SAKU_ASCII_ENC);
-        if (typeof initAscii === 'function') await initAscii();
-      } catch(e2){}
-    }
-    if (remember) { try { localStorage.setItem(STORE_KEY, password); } catch(e){} }
-    enter(data);
+    if(!window.SAKU_MAZE_ENC) throw new Error('没有桌游数据');
+    if(!window.__SAKU_PW) throw new Error('还没解锁');
+    frame.srcdoc = await decryptRaw(window.__SAKU_PW, window.SAKU_MAZE_ENC);
   }catch(e){
-    $('err').textContent = '密码不对，或者数据已损坏';
-    $('go').textContent = '进入';
-    try { localStorage.removeItem(STORE_KEY); } catch(e2){}
+    frame.srcdoc = '<body style="background:#2e2822;color:#f3e9d6;font-family:serif;padding:40px;line-height:1.8">'
+      + '桌游载入失败：' + e.message + '</body>';
   }
 }
 
-$('go').addEventListener('click', function(){ tryOpen($('pw').value, true); });
-$('pw').addEventListener('keydown', function(e){ if (e.key === 'Enter') tryOpen($('pw').value, true); });
-$('lock').addEventListener('click', function(){
-  try { localStorage.removeItem(STORE_KEY); } catch(e){}
-  location.reload();
-});
+/* ---------- 桌面构建 ---------- */
+function buildHome(){
+  var g = $('grid');
+  g.innerHTML = '';
+  APPS.forEach(function(a){
+    var el = document.createElement('div');
+    el.className = 'app';
+    el.dataset.app = a.id;
+    el.innerHTML = '<div class="ico">' + a.ico + '</div><div class="nm">' + a.name + '</div>';
+    el.addEventListener('click', function(){
+      el.classList.add('opening');
+      showView(a.id, el);
+      setTimeout(() => el.classList.remove('opening'), 320);
+    });
+    g.appendChild(el);
+  });
+}
 
-/* 打开时：先试记住的密码 */
-(function(){
+/* ---------- 启动 ---------- */
+async function boot(serverMode){
+  buildHome();
+  tickClock();
+  if(serverMode){
+    try{
+      var r = await fetch('/api/feed', {cache:'no-store'});
+      var d = await r.json();
+      DATA = { days: d.days, bornAt: d.born_at, total: d.total_events,
+               meta: '共 ' + d.total_events + ' 条记录，从 ' + d.born_at + ' 开始。' };
+      var px = await fetch('/ascii/plan.json', {cache:'no-store'}).then(x => x.json()).catch(() => null);
+      if(px){ PLAN = px.plan; PLACES = px.places; }
+      setInterval(async function(){
+        try{
+          var rr = await fetch('/api/feed', {cache:'no-store'});
+          var dd = await rr.json();
+          DATA.days = dd.days; DATA.total = dd.total_events;
+          if(VIEW === 'now' || VIEW === 'archive'){
+            if(VIEW === 'now') renderNow(); else renderArchive();
+          }
+        }catch(e){}
+      }, 60000);
+    }catch(e){}
+    $('gate').classList.add('hide');
+    $('home').classList.remove('hide');
+    return;
+  }
+  // 加密模式
+  async function tryOpen(password, remember){
+    $('err').textContent = '';
+    $('go').textContent = '解密中…';
+    try{
+      window.__SAKU_PW = password;
+      var d = await decryptJSON(password, window.SAKU_ENC);
+      if(window.SAKU_ASCII_ENC){
+        try{
+          var px = await decryptJSON(password, window.SAKU_ASCII_ENC);
+          PLAN = px.plan; PLACES = px.places;
+        }catch(e2){}
+      }
+      if(remember){ try{ localStorage.setItem(STORE_KEY, password); }catch(e){} }
+      DATA = { days: d.days, bornAt: d.bornAt, total: d.total,
+               meta: '共 ' + d.total + ' 条记录，从 ' + d.bornAt + ' 开始。' };
+      $('gate').classList.add('hide');
+      $('home').classList.remove('hide');
+      tickClock();
+    }catch(e){
+      $('err').textContent = '密码不对，或者数据已损坏';
+      $('go').textContent = '进入';
+      try{ localStorage.removeItem(STORE_KEY); }catch(e2){}
+    }
+  }
+  $('go').addEventListener('click', function(){ tryOpen($('pw').value, true); });
+  $('pw').addEventListener('keydown', function(e){ if(e.key === 'Enter') tryOpen($('pw').value, true); });
   var saved = null;
-  try { saved = localStorage.getItem(STORE_KEY); } catch(e){}
-  if (saved) { tryOpen(saved, false); }
-  else { $('pw').focus(); }
-})();
+  try{ saved = localStorage.getItem(STORE_KEY); }catch(e){}
+  if(saved) tryOpen(saved, false); else $('pw').focus();
+}
+
+$('viewBack').addEventListener('click', closeView);
+document.addEventListener('keydown', function(e){ if(e.key === 'Escape' && VIEW) closeView(); });
+boot(IS_DEPLOY ? false : true);
 </script>
 </body>
 </html>
