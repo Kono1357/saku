@@ -99,9 +99,9 @@ body{
 .app.opening .ico{transform:scale(1.18); box-shadow:0 10px 26px rgba(0,0,0,.5)}
 .app .nm{font-size:11.5px; color:var(--dim); letter-spacing:.5px; white-space:nowrap}
 .app[data-app="now"] .ico{background:linear-gradient(165deg,#2a3350,#1a2136)}
-.app[data-app="archive"] .ico{background:linear-gradient(165deg,#2b3040,#1a1d29)}
+.app[data-app="calendar"] .ico{background:linear-gradient(165deg,#2b3040,#1a1d29)}
+.app[data-app="things"] .ico{background:linear-gradient(165deg,#26362c,#17211c)}
 .app[data-app="game"] .ico{background:linear-gradient(165deg,#3a2b2b,#241a1a)}
-.app[data-app="rules"] .ico{background:linear-gradient(165deg,#26362c,#17211c)}
 .app[data-app="about"] .ico{background:linear-gradient(165deg,#2d2a3c,#1b1926)}
 .app[data-app="wall"] .ico{background:linear-gradient(165deg,#2b3a44,#182228)}
 
@@ -248,6 +248,85 @@ ul.items li.night .x{color:#b9c5d8}
   touch-action:pan-y;
 }
 
+/* ---------- 日历 ---------- */
+.cal-head{
+  display:flex; align-items:center; gap:12px; margin-bottom:14px;
+}
+.cal-head .ym{font-size:17px; letter-spacing:2px; color:var(--accent); font-weight:600}
+.cal-head .sp{flex:1}
+.cal-nav{
+  border:1px solid var(--line); background:rgba(255,255,255,.05); color:var(--fg);
+  font-family:inherit; font-size:16px; line-height:1; border-radius:10px;
+  width:36px; height:36px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+}
+.cal-nav:active{background:rgba(255,255,255,.13)}
+.cal-nav:disabled{opacity:.28}
+.cal-week{
+  display:grid; grid-template-columns:repeat(7,1fr); gap:5px;
+  font-size:11.5px; color:var(--dim2); text-align:center; margin-bottom:7px;
+  letter-spacing:1px;
+}
+.cal-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:5px}
+.cal-cell{
+  position:relative; aspect-ratio:1/1; border-radius:11px;
+  border:1px solid transparent; background:rgba(255,255,255,.028);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  font-size:14.5px; color:var(--dim2); cursor:default;
+  transition:transform .14s, background .16s, border-color .16s;
+}
+.cal-cell.empty{background:transparent; border-color:transparent}
+.cal-cell.has{
+  background:rgba(201,185,143,.13); border-color:rgba(201,185,143,.3);
+  color:#f0e6c8; cursor:pointer;
+}
+.cal-cell.has:active{transform:scale(.93); background:rgba(201,185,143,.24)}
+.cal-cell.today{border-color:rgba(125,211,252,.7); box-shadow:0 0 0 1px rgba(125,211,252,.35) inset}
+.cal-cell.sel{background:rgba(201,185,143,.3); border-color:var(--accent); color:#fff8e6}
+.cal-cell .cnt{
+  position:absolute; bottom:5px; font-size:9.5px; line-height:1;
+  color:var(--accent); letter-spacing:.5px;
+}
+.cal-cell .dots{position:absolute; bottom:13px; display:flex; gap:2px}
+.cal-cell .dots i{width:3px;height:3px;border-radius:50%;background:var(--accent);opacity:.75}
+.cal-day{
+  margin-top:16px; border-top:1px solid var(--line); padding-top:14px;
+}
+.cal-day .dh{
+  display:flex; align-items:baseline; gap:10px; margin-bottom:8px;
+}
+.cal-day .dh .d{font-size:16px; color:var(--accent); letter-spacing:1px; font-weight:600}
+.cal-day .dh .w{font-size:12.5px; color:var(--dim2)}
+.cal-day .dh .n{margin-left:auto; font-size:12px; color:var(--dim2)}
+
+/* ---------- 她的东西 ---------- */
+.things-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:12px}
+.thing{
+  border:1px solid var(--line); border-radius:14px; padding:14px 12px;
+  background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015));
+  text-align:center; transition:transform .16s;
+}
+.thing:active{transform:scale(.97)}
+.thing .art{
+  font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11px; line-height:1.15;
+  white-space:pre; color:var(--accent); margin-bottom:10px; min-height:52px;
+  display:flex; align-items:center; justify-content:center;
+}
+.thing .nm{font-size:14px; color:#f2ecdc; letter-spacing:1px; margin-bottom:5px}
+.thing .ds{font-size:11.5px; color:var(--dim); line-height:1.6}
+.places{display:flex; flex-direction:column; gap:8px}
+.place{
+  display:flex; align-items:center; gap:12px; padding:11px 13px;
+  border:1px solid var(--line); border-radius:12px; background:rgba(255,255,255,.025);
+}
+.place .ic{
+  font-family:ui-monospace,monospace; font-size:15px; color:var(--accent);
+  width:30px; text-align:center; flex:0 0 auto;
+}
+.place .tx{flex:1; min-width:0}
+.place .tx b{font-size:14px; color:#f2ecdc; font-weight:500}
+.place .tx div{font-size:11.5px; color:var(--dim2); margin-top:2px}
+.place .tagn{font-size:11px; color:var(--dim2); white-space:nowrap}
+
 /* 列表式入口（规则/关于） */
 .doc{font-size:14.5px;line-height:1.95;color:#cdd7e8}
 .doc h4{margin:20px 0 8px;font-size:14px;letter-spacing:1.5px;color:var(--accent)}
@@ -324,9 +403,9 @@ const STORE_KEY = 'saku_pw';
 
 const APPS = [
   {id:'now',     ico:'◉', name:'现在'},
-  {id:'archive', ico:'▤', name:'归档'},
+  {id:'calendar',ico:'▦', name:'日历'},
   {id:'game',    ico:'⚄', name:'桌游'},
-  {id:'rules',   ico:'❖', name:'规则'},
+  {id:'things',  ico:'❖', name:'她的东西'},
   {id:'wall',    ico:'▧', name:'壁纸'},
   {id:'about',   ico:'◌', name:'关于'},
 ];
@@ -603,8 +682,8 @@ function showView(id, originEl){
 
   body.classList.remove('short');
   if(id === 'now') renderNow();
-  else if(id === 'archive') renderArchive();
-  else if(id === 'rules') renderRules();
+  else if(id === 'calendar') renderCalendar();
+  else if(id === 'things') renderThings();
   else if(id === 'wall') renderWall();
   else if(id === 'about') renderAbout();
   else if(id === 'game'){
@@ -700,6 +779,146 @@ function renderArchive(){
     sec.appendChild(ul);
     box.appendChild(sec);
   });
+}
+
+/* ---------- 日历 ---------- */
+let CAL_Y = null, CAL_M = null, CAL_SEL = null;
+function dayMap(){
+  var m = {};
+  if(DATA && DATA.days) DATA.days.forEach(function(d){ m[d.date] = d; });
+  return m;
+}
+function renderCalendar(keepSel){
+  if(!DATA) return;
+  var body = $('viewBody');
+  var now = new Date(Date.now() + clockSkew);
+  if(CAL_Y == null){ CAL_Y = now.getFullYear(); CAL_M = now.getMonth(); }
+  var map = dayMap();
+
+  var first = new Date(CAL_Y, CAL_M, 1);
+  var startDow = (first.getDay() + 6) % 7;          // 周一为第一列
+  var daysIn = new Date(CAL_Y, CAL_M + 1, 0).getDate();
+  var todayKey = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate());
+
+  var cells = '';
+  for(var i = 0; i < startDow; i++) cells += '<div class="cal-cell empty"></div>';
+  for(var d = 1; d <= daysIn; d++){
+    var key = CAL_Y + '-' + pad(CAL_M + 1) + '-' + pad(d);
+    var rec = map[key];
+    var cls = 'cal-cell';
+    if(rec) cls += ' has';
+    if(key === todayKey) cls += ' today';
+    if(key === CAL_SEL) cls += ' sel';
+    var inner = '<span>' + d + '</span>';
+    if(rec){
+      var dots = '';
+      for(var k = 0; k < Math.min(3, rec.items.length); k++) dots += '<i></i>';
+      inner += '<span class="dots">' + dots + '</span>';
+      inner += '<span class="cnt">' + rec.items.length + ' 条</span>';
+    }
+    cells += '<div class="' + cls + '" data-day="' + (rec ? key : '') + '">' + inner + '</div>';
+  }
+
+  var selHtml = '';
+  if(CAL_SEL && map[CAL_SEL]){
+    var r = map[CAL_SEL];
+    selHtml = '<div class="cal-day"><div class="dh"><span class="d">'
+      + (+CAL_SEL.slice(5,7)) + '月' + (+CAL_SEL.slice(8,10)) + '日</span>'
+      + '<span class="w">' + r.weekday + '</span>'
+      + '<span class="n">' + r.items.length + ' 条</span></div>'
+      + '<ul class="items" id="calList"></ul></div>';
+  } else if(CAL_SEL){
+    selHtml = '<div class="cal-day"><div class="empty">这一天她没有留下记录。</div></div>';
+  } else {
+    selHtml = '<div class="cal-day"><div class="empty">点一个有记录的日期，看那天她做了什么。</div></div>';
+  }
+
+  body.innerHTML =
+    '<div class="cal-head">'
+    + '<div class="ym">' + CAL_Y + ' 年 ' + (CAL_M + 1) + ' 月</div>'
+    + '<div class="sp"></div>'
+    + '<button class="cal-nav" id="calPrev">‹</button>'
+    + '<button class="cal-nav" id="calNext">›</button>'
+    + '</div>'
+    + '<div class="cal-week"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>'
+    + '<div class="cal-grid" id="calGrid">' + cells + '</div>'
+    + selHtml;
+
+  if(CAL_SEL && map[CAL_SEL]){
+    var ul = $('calList');
+    map[CAL_SEL].items.forEach(function(it){ ul.appendChild(line(it.time, it.text)); });
+  }
+
+  $('calPrev').onclick = function(){
+    sfx('click'); CAL_M--; if(CAL_M < 0){ CAL_M = 11; CAL_Y--; } CAL_SEL = null; renderCalendar();
+  };
+  $('calNext').onclick = function(){
+    sfx('click'); CAL_M++; if(CAL_M > 11){ CAL_M = 0; CAL_Y++; } CAL_SEL = null; renderCalendar();
+  };
+  Array.prototype.forEach.call($('calGrid').children, function(el){
+    var k = el.dataset.day;
+    if(!k) return;
+    el.addEventListener('click', function(){
+      if(CAL_SEL === k){ CAL_SEL = null; }
+      else { CAL_SEL = k; sfx('click'); }
+      renderCalendar();
+      var d = document.querySelector('.cal-day');
+      if(d) d.scrollIntoView({behavior:'smooth', block:'nearest'});
+    });
+  });
+}
+
+/* ---------- 她的东西 ---------- */
+const THINGS = [
+  { nm:"白玉菩提根手串", art:"  .-'''-.\n (  o o  )\n  `-...-`", ds:"戴在左手腕上，已经氧化开片了，表面哑光。摘下来的时候，手腕上会留一圈印。" },
+  { nm:"六面骰子", art:"  +-----+\n  | o o |\n  |  o  |\n  | o o |\n  +-----+", ds:"口袋里那颗。做不了决定的时候就掷一下——大部分时候掷完还是照原来的想法做。" },
+  { nm:"手机", art:"  +-------+\n  |   (   |\n  |       |\n  +-------+", ds:"壁纸是夜空里一弯细月。相册里没什么照片。" },
+  { nm:"校服", art:"   /\\_/\\\n  |  o o  |\n  |  ___  |\n  |_______|", ds:"白色翻领 T 恤配深蓝色外套，袖子太长，常年盖住半只手。" },
+  { nm:"书包", art:"   ______\n  |      |\n  |______|\n   \\____/", ds:"单肩背的那只。里面常年有一把伞，虽然经常忘带。" },
+  { nm:"马克杯", art:"  |~~~|\n  |   |\n  \\___/", ds:"家里唯一一个杯子，白色的，杯口磕掉了一小块。" },
+  { nm:"台灯", art:"    ___\n   /   \\\n    \\ /\n     |", ds:"书桌上那盏。暖黄色的光，只照得亮一小圈桌面。" },
+  { nm:"一页迷宫", art:"  +--+--+--+\n  |  |  |  |\n  +--+--+--+", ds:"她自己画的单人桌游，画在一张对折再对折的纸上。深渊尽头有小怪和 Boss。" },
+];
+
+function renderThings(){
+  var P = placeAt(new Date(Date.now() + clockSkew));
+  var pset = {};
+  if(PLACES){
+    Object.keys(PLACES).forEach(function(k){
+      var v = PLACES[k], key = v[2];
+      if(!pset[key]) pset[key] = { name:key, room:v[0], indoor:v[1], n:0 };
+      pset[key].n++;
+    });
+  }
+  var plist = Object.keys(pset).map(k => pset[k]);
+  var indoor = plist.filter(p => p.indoor).length;
+
+  var html = '';
+  html += '<div class="card hl"><h3>此刻</h3>'
+        + '<div class="big">' + (P ? P.cn : '——') + '</div>'
+        + '<div class="sub">朔' + (P ? (ACT_CN[P.act] || '在这里') : '') + '</div></div>';
+
+  html += '<div class="card"><h3>她随身和身边的东西</h3><div class="things-grid">'
+    + THINGS.map(t => '<div class="thing"><div class="art">' + t.art + '</div>'
+        + '<div class="nm">' + t.nm + '</div><div class="ds">' + t.ds + '</div></div>').join('')
+    + '</div></div>';
+
+  html += '<div class="card"><h3>她去过的 ' + plist.length + ' 个地方</h3><div class="places">'
+    + plist.map(function(p){
+        var ic = p.indoor ? '▣' : '◈';
+        return '<div class="place"><span class="ic">' + ic + '</span>'
+          + '<span class="tx"><b>' + p.name + '</b><div>' + (p.indoor ? '室内' : '在外面') + '</div></span>'
+          + '<span class="tagn">' + p.n + ' 个时段</span></div>';
+      }).join('')
+    + '</div></div>';
+
+  html += '<div class="card"><h3>她的一天</h3>'
+    + '<p>工作日 6:20 醒，7:44 出门，8:26 到教室。中午去食堂，下午在图书室待一节课。16:48 往回走，17:30 到家。晚上写作业到 21:05，洗漱，看会儿手机，22:45 睡。</p>'
+    + '<p>周末会赖床、洗衣服、去书店和便利店。下午在公园，晚上在天台待一会儿。</p>'
+    + '<p style="color:var(--dim2);font-size:12.5px">共 ' + plist.length + ' 个地点，其中 ' + indoor + ' 个在室内。</p>'
+    + '</div>';
+
+  $('viewBody').innerHTML = html;
 }
 
 /* ---------- 规则 ---------- */
