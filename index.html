@@ -316,6 +316,20 @@ function petState(d){
   SakuAscii.setTag(P.indoor ? '室内 · ' + P.cn : '城区 · ' + P.cn);
 }
 
+/* 纯文本解密：不动 JSON（桌游是整页 HTML，不能 parse） */
+async function decryptRaw(password, enc){
+  var material = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+  var key = await crypto.subtle.deriveKey(
+    { name:'PBKDF2', salt: b64buf(enc.salt), iterations: 250000, hash:'SHA-256' },
+    material, { name:'AES-GCM', length:256 }, false, ['decrypt']);
+  var ct = b64buf(enc.ct), tag = b64buf(enc.tag);
+  var joined = new Uint8Array(ct.length + tag.length);
+  joined.set(ct, 0); joined.set(tag, ct.length);
+  var plain = await crypto.subtle.decrypt({ name:'AES-GCM', iv: b64buf(enc.iv) }, key, joined);
+  return new TextDecoder().decode(plain);
+}
+
 /* ---------- 桌游《一页迷宫》 ---------- */
 let mazeLoaded = false;
 let mazeBusy = false;
@@ -328,7 +342,8 @@ async function openMaze(){
   const frame = document.getElementById('mazeFrame');
   try {
     if (!window.SAKU_MAZE_ENC) throw new Error('没有桌游数据');
-    const html = await decrypt(window.__SAKU_PW, window.SAKU_MAZE_ENC);
+    if (!window.__SAKU_PW) throw new Error('还没解锁（先在密码门进入一次）');
+    const html = await decryptRaw(window.__SAKU_PW, window.SAKU_MAZE_ENC);
     frame.srcdoc = html;
     mazeLoaded = true;
   } catch (e) {
