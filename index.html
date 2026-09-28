@@ -313,7 +313,10 @@ function petState(d){
     rain: rain, snow: snow, period: !!d.period,
   });
   SakuAscii.setAction(P.act, ACT_CN[P.act] || '');
-  SakuAscii.setTag(P.indoor ? '/* ---------- 桌游《一页迷宫》 ---------- */
+  SakuAscii.setTag(P.indoor ? '室内 · ' + P.cn : '城区 · ' + P.cn);
+}
+
+/* ---------- 桌游《一页迷宫》 ---------- */
 let mazeLoaded = false;
 let mazeBusy = false;
 
@@ -337,8 +340,6 @@ async function openMaze(){
 document.getElementById('gameBtn').addEventListener('click', openMaze);
 document.getElementById('mazeClose').addEventListener('click', () => {
   document.getElementById('mazeMask').classList.remove('on');
-});
-pMask').classList.remove('on');
 });
 
 document.getElementById('pet').addEventListener('click', () => {
