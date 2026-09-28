@@ -89,6 +89,39 @@
   .screen.is-night .a-pre{filter:brightness(.66) saturate(.72) hue-rotate(-8deg)}
   .screen.is-period .a-pre{filter:brightness(.92) saturate(.8) sepia(.18)}
 
+  /* ---------- 桌游入口 ---------- */
+  .game-btn{display:inline-flex;align-items:center;gap:6px;margin-top:14px;
+            border:1px solid rgba(201,185,143,.32);background:rgba(201,185,143,.10);
+            color:#e8dcb4;font-size:12.5px;font-family:inherit;letter-spacing:1px;
+            border-radius:999px;padding:6px 15px;cursor:pointer}
+  .game-btn:active{transform:scale(.97);background:rgba(201,185,143,.18)}
+  .mp-mask{position:fixed;inset:0;z-index:60;display:none;overflow:auto;
+           background:rgba(4,6,10,.94);padding:14px 12px 40px}
+  .mp-mask.on{display:block}
+  .mp-panel{max-width:640px;margin:0 auto;border:1px solid rgba(255,255,255,.09);
+            border-radius:14px;background:#090c14;padding:14px 14px 10px}
+  .mp-close{float:right;border:1px solid var(--line);background:rgba(255,255,255,.03);
+            color:var(--dim);font-size:12px;font-family:inherit;border-radius:999px;
+            padding:3px 11px;cursor:pointer}
+  .mp-head{font-size:12.5px;color:var(--accent);letter-spacing:2px;margin-bottom:12px}
+  .mp-board{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;
+            line-height:1.35;margin:0;white-space:pre;overflow-x:auto;
+            color:#5d6a80;background:#070a11;border-radius:8px;padding:10px 8px}
+  .mp-row{display:flex;gap:14px;align-items:flex-start;margin-top:12px}
+  .mp-dice{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;
+           line-height:1.15;margin:0;white-space:pre;flex:0 0 auto}
+  .mp-side{flex:1;min-width:0}
+  .mp-info{font-size:12.5px;margin-bottom:10px;line-height:1.8}
+  .mp-btns{display:flex;gap:8px}
+  .mp-btns button{border:1px solid rgba(201,185,143,.32);background:rgba(201,185,143,.10);
+                  color:#e8dcb4;font-size:13px;font-family:inherit;letter-spacing:1px;
+                  border-radius:9px;padding:8px 16px;cursor:pointer}
+  .mp-btns button:active{transform:scale(.97)}
+  .mp-btns .mp-new{border-color:var(--line);background:rgba(255,255,255,.03);color:var(--dim)}
+  .mp-log{margin-top:12px;font-size:12px;line-height:1.85;color:var(--dim);
+          border-top:1px solid rgba(255,255,255,.06);padding-top:9px}
+  .mp-log div:first-child{color:#dfe6f2}
+
   .now{margin-top:24px;border-radius:16px;padding:18px 18px 8px;
        border:1px solid rgba(201,185,143,.28);
        background:linear-gradient(180deg,rgba(201,185,143,.10),rgba(201,185,143,.02));
@@ -164,6 +197,7 @@
     <span class="chip" id="cntChip">—</span>
     <span class="chip" id="bornChip">—</span>
   </div>
+  <button class="game-btn" id="gameBtn">桌游 · 月途</button>
 
   <!-- 会动的朔（ASCII 观测窗） -->
   <section class="pet" id="pet">
@@ -191,9 +225,19 @@
   </footer>
 </div>
 
+<!-- 桌游弹层 -->
+<div class="mp-mask" id="mpMask">
+  <div class="mp-panel">
+    <button class="mp-close" id="mpClose">关上</button>
+    <div id="mpHost"></div>
+  </div>
+</div>
+
+
 <script src="saku-data.enc.js"></script>
 <script src="saku-ascii.enc.js"></script>
 <script src="saku-ascii.js"></script>
+<script src="moonpath.js"></script>
 <script src="saku-engine.js"></script>
 <script>
 /* 世界设定 —— 改这里可以换一条世界线 */
@@ -271,6 +315,21 @@ function petState(d){
   SakuAscii.setAction(P.act, ACT_CN[P.act] || '');
   SakuAscii.setTag(P.indoor ? '室内 · ' + P.cn : '城区 · ' + P.cn);
 }
+
+/* ---------- 桌游 ---------- */
+let mpInited = false;
+function openGame(){
+  const mask = document.getElementById('mpMask');
+  mask.classList.add('on');
+  if (!mpInited) {
+    MoonPath.init({ host: document.getElementById('mpHost') });
+    mpInited = true;
+  }
+}
+document.getElementById('gameBtn').addEventListener('click', openGame);
+document.getElementById('mpClose').addEventListener('click', () => {
+  document.getElementById('mpMask').classList.remove('on');
+});
 
 document.getElementById('pet').addEventListener('click', () => {
   if (asciiReady) SakuAscii.say(SAYS[Math.floor(Math.random() * SAYS.length)]);
