@@ -98,9 +98,8 @@ body{
 }
 .app.opening .ico{transform:scale(1.18); box-shadow:0 10px 26px rgba(0,0,0,.5)}
 .app .nm{font-size:11.5px; color:var(--dim); letter-spacing:.5px; white-space:nowrap}
-.app[data-app="now"] .ico{background:linear-gradient(165deg,#2a3350,#1a2136)}
 .app[data-app="calendar"] .ico{background:linear-gradient(165deg,#2b3040,#1a1d29)}
-.app[data-app="things"] .ico{background:linear-gradient(165deg,#26362c,#17211c)}
+.app[data-app="diary"] .ico{background:linear-gradient(165deg,#332b3c,#1e1926)}
 .app[data-app="game"] .ico{background:linear-gradient(165deg,#3a2b2b,#241a1a)}
 .app[data-app="about"] .ico{background:linear-gradient(165deg,#2d2a3c,#1b1926)}
 .app[data-app="wall"] .ico{background:linear-gradient(165deg,#2b3a44,#182228)}
@@ -247,6 +246,33 @@ ul.items li.night .x{color:#b9c5d8}
   position:fixed; left:0; top:0; bottom:0; width:18px; z-index:25;
   touch-action:pan-y;
 }
+
+/* ---------- 日记 ---------- */
+.diary-bar{display:flex; gap:7px; overflow-x:auto; padding-bottom:10px; margin-bottom:14px;
+           -webkit-overflow-scrolling:touch; scrollbar-width:none}
+.diary-bar::-webkit-scrollbar{display:none}
+.dchip{flex:0 0 auto; border:1px solid var(--line); background:rgba(255,255,255,.04);
+       color:var(--dim); font-family:inherit; font-size:12.5px; border-radius:999px;
+       padding:6px 13px; cursor:pointer; white-space:nowrap}
+.dchip.on{background:rgba(201,185,143,.2); border-color:rgba(201,185,143,.5); color:#f0e6c8; font-weight:600}
+.dchip:active{transform:scale(.95)}
+.diary-paper{
+  border:1px solid var(--line); border-radius:15px; padding:20px 18px 18px;
+  background:
+    repeating-linear-gradient(0deg,rgba(201,185,143,.05) 0 1px,transparent 1px 30px),
+    linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.012));
+  box-shadow:0 8px 26px rgba(0,0,0,.3);
+}
+.dhead{display:flex; align-items:baseline; gap:10px; margin-bottom:14px}
+.dhead .d1{font-size:21px; letter-spacing:2px; color:#f2ecdc; font-weight:600}
+.dhead .d2{font-size:12.5px; color:var(--dim2)}
+.dsum{font-size:13.5px; color:var(--accent); line-height:1.85; margin-bottom:14px; letter-spacing:.3px}
+.dline{height:1px; background:linear-gradient(90deg,rgba(201,185,143,.35),rgba(201,185,143,0)); margin:14px 0}
+ul.ditems{list-style:none; margin:0; padding:0}
+ul.ditems li{display:flex; gap:13px; padding:9px 0; line-height:1.8}
+ul.ditems .dt{flex:0 0 46px; font-size:12px; color:#9d8f68; font-variant-numeric:tabular-nums; padding-top:4px}
+ul.ditems .dx{flex:1; font-size:14.5px; color:#e2e9f5; line-height:1.85}
+.dfoot{font-size:14px; color:#cdd7e8; text-align:right; font-style:italic; letter-spacing:1px; opacity:.9}
 
 /* ---------- 日历 ---------- */
 .cal-head{
@@ -402,10 +428,9 @@ const IS_DEPLOY = true;
 const STORE_KEY = 'saku_pw';
 
 const APPS = [
-  {id:'now',     ico:'◉', name:'现在'},
   {id:'calendar',ico:'▦', name:'日历'},
   {id:'game',    ico:'⚄', name:'桌游'},
-  {id:'things',  ico:'❖', name:'她的东西'},
+  {id:'diary',   ico:'✎', name:'日记'},
   {id:'wall',    ico:'▧', name:'壁纸'},
   {id:'about',   ico:'◌', name:'关于'},
 ];
@@ -663,7 +688,7 @@ function tickClock(){
   $('clkDate').textContent = (d.getMonth()+1) + '月' + d.getDate() + '日 周' + wk;
   var P = placeAt(d);
   $('clkWhere').textContent = P ? (P.cn + ' · ' + (ACT_CN[P.act] || '')) : '—';
-  if(VIEW === 'now') renderNow();
+  if(VIEW === 'diary') renderDiary();
 }
 setInterval(tickClock, 1000);
 
@@ -681,9 +706,8 @@ function showView(id, originEl){
   }
 
   body.classList.remove('short');
-  if(id === 'now') renderNow();
+  if(id === 'diary') renderDiary();
   else if(id === 'calendar') renderCalendar();
-  else if(id === 'things') renderThings();
   else if(id === 'wall') renderWall();
   else if(id === 'about') renderAbout();
   else if(id === 'game'){
@@ -719,31 +743,92 @@ function line(t, text){
   li.appendChild(a); li.appendChild(b);
   return li;
 }
-function renderNow(){
-  if(!DATA || VIEW !== 'now') return;
-  var body = $('viewBody');
-  var days = DATA.days || [];
-  var latest = days.length ? days[days.length-1] : null;
-  var P = placeAt(new Date(Date.now() + clockSkew));
-  var recent = [];
-  if(latest) recent = latest.items.slice(-4);
+/* ---------- 日记 ---------- */
+const MOODS = [
+  '有点累。但还好。','还行吧。','……没什么特别的。','就这样。','一般。',
+  '今天不太想说话。','没什么，习惯了。','还好，一个人也可以。',
+  '有点想下雨。','嗯，先这样吧。','算了，睡吧。','明天再说。',
+];
+const OPENERS = [
+  '今天记了 {n} 件事，从 {a} 一直到 {b}。',
+  '{a} 到 {b}，一共 {n} 条。',
+  '这一天被切成了 {n} 段，从 {a} 开始，到 {b} 结束。',
+  '{n} 件事。天亮到天黑。',
+  '从 {a} 到 {b}，{n} 条。',
+];
+function slotOf(h){
+  if(h < 6) return 'late';
+  if(h < 8) return 'early';
+  if(h < 11) return 'am';
+  if(h < 13) return 'noon';
+  if(h < 17) return 'pm';
+  if(h < 19) return 'eve';
+  if(h < 22) return 'night';
+  return 'late';
+}
+function seedOf(str, salt){
+  var h = 2166136261, x = str + '|' + (salt || '');
+  for(var i = 0; i < x.length; i++){ h ^= x.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h >>> 0);
+}
+function pick(arr, seed){ return arr[seed % arr.length]; }
 
-  var html = '';
-  if(P){
-    html += '<div class="card hl">'
-      + '<h3>此刻</h3>'
-      + '<div class="big">' + P.cn + '</div>'
-      + '<div class="sub">朔' + (ACT_CN[P.act] || '在这里') + (P.indoor ? '（室内）' : '（外面）') + '</div>'
-      + '</div>';
+let DIARY_SEL = null;
+function renderDiary(){
+  if(!DATA) return;
+  var body = $('viewBody');
+  var days = (DATA.days || []).slice().reverse();
+  if(!days.length){ body.innerHTML = '<div class="empty">她还没开始写。</div>'; return; }
+  if(!DIARY_SEL || !days.some(function(d){ return d.date === DIARY_SEL; })) DIARY_SEL = days[0].date;
+
+  var day = days.filter(function(d){ return d.date === DIARY_SEL; })[0];
+  var items = day.items || [];
+  var seed = seedOf(day.date);
+  var first = items.length ? items[0].time : '—';
+  var last = items.length ? items[items.length-1].time : '—';
+
+  var slots = {};
+  items.forEach(function(it){
+    var k = slotOf(parseInt(it.time.slice(0,2), 10));
+    (slots[k] = slots[k] || []).push(it);
+  });
+  var picked = ['early','am','noon','pm','eve','night','late']
+    .filter(function(k){ return slots[k] && slots[k].length; })
+    .map(function(k){ return slots[k][seedOf(day.date, k) % slots[k].length]; });
+
+  var lab = fmtDay(day.date);
+  var mo = parseInt(day.date.slice(5,7),10), dd = parseInt(day.date.slice(8,10),10);
+
+  var html = '<div class="diary-bar" id="diaryBar">'
+    + days.slice(0, 30).map(function(d){
+        return '<button class="dchip' + (d.date === DIARY_SEL ? ' on' : '') + '" data-d="' + d.date + '">'
+          + parseInt(d.date.slice(5,7),10) + '/' + parseInt(d.date.slice(8,10),10) + '</button>';
+      }).join('') + '</div>';
+
+  html += '<div class="diary-paper">'
+    + '<div class="dhead"><span class="d1">' + mo + ' 月 ' + dd + ' 日</span>'
+    + '<span class="d2">' + day.weekday + (lab.tag ? ' · ' + lab.tag : '') + '</span></div>'
+    + '<div class="dsum">' + pick(OPENERS, seed).replace('{n}', items.length)
+        .replace('{a}', first).replace('{b}', last) + '</div>'
+    + '<div class="dline"></div>'
+    + '<ul class="ditems">'
+    + picked.map(function(it){
+        return '<li><span class="dt">' + it.time + '</span><span class="dx">' + it.text + '</span></li>';
+      }).join('')
+    + '</ul>'
+    + '<div class="dline"></div>'
+    + '<div class="dfoot">' + pick(MOODS, seedOf(day.date, 'mood')) + '</div>'
+    + '</div>';
+
+  if(items.length > picked.length){
+    html += '<div class="center" style="padding:14px 0">这一天还有 ' + (items.length - picked.length)
+          + ' 条，去「日历」翻完整记录。</div>';
   }
-  html += '<div class="card"><h3>最近发生的</h3><ul class="items" id="nowList"></ul></div>';
-  if(DATA.meta) html += '<div class="card"><h3>这个世界</h3><p>' + DATA.meta + '</p></div>';
 
   body.innerHTML = html;
-  var ul = $('nowList');
-  if(recent.length) recent.forEach(it => ul.appendChild(line(it.time, it.text)));
-  else ul.innerHTML = '<li><p class="x empty">还没有记录。</p></li>';
-  tickClock();
+  Array.prototype.forEach.call($('diaryBar').children, function(b){
+    b.onclick = function(){ sfx('click'); DIARY_SEL = b.dataset.d; body.scrollTop = 0; renderDiary(); };
+  });
 }
 
 /* ---------- 归档 ---------- */
@@ -755,32 +840,6 @@ function fmtDay(iso){
   if(new Date().getFullYear() !== p[0]) name = p[0] + '年' + name;
   return { name, tag: diff === 0 ? '今天' : diff === 1 ? '昨天' : diff === 2 ? '前天' : '' };
 }
-function renderArchive(){
-  if(!DATA) return;
-  var body = $('viewBody');
-  var days = DATA.days || [];
-  if(!days.length){ body.innerHTML = '<div class="empty">还没有记录。</div>'; return; }
-  body.innerHTML = '<div class="chips">' + days.slice().reverse().slice(0,7).map(d =>
-      '<span class="chip">' + fmtDay(d.date).name + ' · ' + d.items.length + ' 条</span>').join('') + '</div>'
-    + '<div id="days"></div>';
-  var box = $('days');
-  days.slice().reverse().forEach(function(day){
-    var lab = fmtDay(day.date);
-    var sec = document.createElement('section'); sec.className = 'day';
-    var head = document.createElement('div'); head.className = 'dayhead';
-    head.innerHTML = '<span class="arrow">▶</span><span>' + lab.name + '</span>'
-      + '<span style="color:var(--dim2);font-size:12px">' + day.weekday + '</span>'
-      + (lab.tag ? '<span class="tag">' + lab.tag + '</span>' : '')
-      + '<span class="n">' + day.items.length + ' 条</span>';
-    head.addEventListener('click', () => sec.classList.toggle('open'));
-    sec.appendChild(head);
-    var ul = document.createElement('ul'); ul.className = 'items';
-    day.items.forEach(it => ul.appendChild(line(it.time, it.text)));
-    sec.appendChild(ul);
-    box.appendChild(sec);
-  });
-}
-
 /* ---------- 日历 ---------- */
 let CAL_Y = null, CAL_M = null, CAL_SEL = null;
 function dayMap(){
@@ -866,59 +925,6 @@ function renderCalendar(keepSel){
       if(d) d.scrollIntoView({behavior:'smooth', block:'nearest'});
     });
   });
-}
-
-/* ---------- 她的东西 ---------- */
-const THINGS = [
-  { nm:"白玉菩提根手串", art:"  .-'''-.\n (  o o  )\n  `-...-`", ds:"戴在左手腕上，已经氧化开片了，表面哑光。摘下来的时候，手腕上会留一圈印。" },
-  { nm:"六面骰子", art:"  +-----+\n  | o o |\n  |  o  |\n  | o o |\n  +-----+", ds:"口袋里那颗。做不了决定的时候就掷一下——大部分时候掷完还是照原来的想法做。" },
-  { nm:"手机", art:"  +-------+\n  |   (   |\n  |       |\n  +-------+", ds:"壁纸是夜空里一弯细月。相册里没什么照片。" },
-  { nm:"校服", art:"   /\\_/\\\n  |  o o  |\n  |  ___  |\n  |_______|", ds:"白色翻领 T 恤配深蓝色外套，袖子太长，常年盖住半只手。" },
-  { nm:"书包", art:"   ______\n  |      |\n  |______|\n   \\____/", ds:"单肩背的那只。里面常年有一把伞，虽然经常忘带。" },
-  { nm:"马克杯", art:"  |~~~|\n  |   |\n  \\___/", ds:"家里唯一一个杯子，白色的，杯口磕掉了一小块。" },
-  { nm:"台灯", art:"    ___\n   /   \\\n    \\ /\n     |", ds:"书桌上那盏。暖黄色的光，只照得亮一小圈桌面。" },
-  { nm:"一页迷宫", art:"  +--+--+--+\n  |  |  |  |\n  +--+--+--+", ds:"她自己画的单人桌游，画在一张对折再对折的纸上。深渊尽头有小怪和 Boss。" },
-];
-
-function renderThings(){
-  var P = placeAt(new Date(Date.now() + clockSkew));
-  var pset = {};
-  if(PLACES){
-    Object.keys(PLACES).forEach(function(k){
-      var v = PLACES[k], key = v[2];
-      if(!pset[key]) pset[key] = { name:key, room:v[0], indoor:v[1], n:0 };
-      pset[key].n++;
-    });
-  }
-  var plist = Object.keys(pset).map(k => pset[k]);
-  var indoor = plist.filter(p => p.indoor).length;
-
-  var html = '';
-  html += '<div class="card hl"><h3>此刻</h3>'
-        + '<div class="big">' + (P ? P.cn : '——') + '</div>'
-        + '<div class="sub">朔' + (P ? (ACT_CN[P.act] || '在这里') : '') + '</div></div>';
-
-  html += '<div class="card"><h3>她随身和身边的东西</h3><div class="things-grid">'
-    + THINGS.map(t => '<div class="thing"><div class="art">' + t.art + '</div>'
-        + '<div class="nm">' + t.nm + '</div><div class="ds">' + t.ds + '</div></div>').join('')
-    + '</div></div>';
-
-  html += '<div class="card"><h3>她去过的 ' + plist.length + ' 个地方</h3><div class="places">'
-    + plist.map(function(p){
-        var ic = p.indoor ? '▣' : '◈';
-        return '<div class="place"><span class="ic">' + ic + '</span>'
-          + '<span class="tx"><b>' + p.name + '</b><div>' + (p.indoor ? '室内' : '在外面') + '</div></span>'
-          + '<span class="tagn">' + p.n + ' 个时段</span></div>';
-      }).join('')
-    + '</div></div>';
-
-  html += '<div class="card"><h3>她的一天</h3>'
-    + '<p>工作日 6:20 醒，7:44 出门，8:26 到教室。中午去食堂，下午在图书室待一节课。16:48 往回走，17:30 到家。晚上写作业到 21:05，洗漱，看会儿手机，22:45 睡。</p>'
-    + '<p>周末会赖床、洗衣服、去书店和便利店。下午在公园，晚上在天台待一会儿。</p>'
-    + '<p style="color:var(--dim2);font-size:12.5px">共 ' + plist.length + ' 个地点，其中 ' + indoor + ' 个在室内。</p>'
-    + '</div>';
-
-  $('viewBody').innerHTML = html;
 }
 
 /* ---------- 规则 ---------- */
@@ -1095,7 +1101,8 @@ async function boot(serverMode){
           var dd = await rr.json();
           DATA.days = dd.days; DATA.total = dd.total_events;
           if(VIEW === 'now' || VIEW === 'archive'){
-            if(VIEW === 'now') renderNow(); else renderArchive();
+            if(VIEW === 'calendar') renderCalendar();
+            else if(VIEW === 'diary') renderDiary();
           }
         }catch(e){}
       }, 60000);
