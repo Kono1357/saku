@@ -1,0 +1,38 @@
+{
+  "_readme": {
+    "用途": "外部私密文本池。引擎只负责触发判定与抽取，文本全部来自这里。",
+    "挂载方式": "在 index.html 里 <script src=\"private_pool.json.js\"></script> 会设置 window.SAKU_PRIVATE，主页面解密后再调 Saku.mountPrivate(window.SAKU_PRIVATE)；或直接 Saku.mountPrivate(JSON对象)。",
+    "字段": {
+      "type": "三类之一：self_exploration / secret_purchase / forbidden_touch",
+      "items": "字符串数组，或 { stage, text } 对象数组",
+      "stage": "仅 secret_purchase 用：browse / order / shipping / pickup / unbox / resolve",
+      "weight": "可选，数字，默认 1"
+    },
+    "注意": "缺池不会报错——引擎返回 null，该类文本当天不出。count 为 0 的池等同于未挂载。"
+  },
+
+  "self_exploration": {
+    "type": "self_exploration",
+    "trigger": { "stir": ">80", "selfHate": ">50", "hours": "22:00-02:00" },
+    "aftermath": { "moodShock": "+0.8", "debuff": "-2.5", "durationDays": 2, "note": "深度自我厌弃" },
+    "count": 0,
+    "items": []
+  },
+
+  "secret_purchase": {
+    "type": "secret_purchase",
+    "trigger": { "lonely": ">75", "energy": "<=4", "deepNight": true, "chance": 0.28 },
+    "pipeline": ["browse", "order", "shipping", "pickup", "unbox", "resolve"],
+    "anxietyPerStage": { "order": 6, "pickup": 6, "unbox": 14 },
+    "selfHateOnUnbox": 9,
+    "count": 0,
+    "items": []
+  },
+
+  "forbidden_touch": {
+    "type": "forbidden_touch",
+    "trigger": { "chance": 0.05, "scene": "any" },
+    "count": 0,
+    "items": []
+  }
+}
