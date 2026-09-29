@@ -1493,6 +1493,51 @@ ul.xlist .xr-rebuild{background:linear-gradient(90deg,rgba(160,110,210,.10),tran
 .app:nth-child(4){animation-delay:.14s}
 .app:nth-child(5){animation-delay:.18s}
 .app:nth-child(6){animation-delay:.22s}
+/* ============================================================
+   日记 · 最终覆盖
+   上面那批旧规则（浅色字 #e6eaf2）是在暗色主题时期写的，
+   排在后面会把新写的深色字盖掉 —— 结果就是米色纸上写白字，看不见。
+   这里用同样权重但更靠后的规则强制压回去。
+   ============================================================ */
+.dpaper{ color:#2b2117 }
+.dpaper .dtp{
+  margin:0 0 17px; padding-left:1.2em; text-indent:-.6em;
+  font-size:16px; line-height:2.15; letter-spacing:.02em;
+  color:#2b2117;
+  font-family:"Kaiti SC","STKaiti","KaiTi","Songti SC",serif;
+}
+.dpaper .dtp:last-child{ margin-bottom:4px }
+.dpaper .dtp-empty{ color:#9a8straight; font-style:italic }
+.dpaper .dtxt{ margin:0 0 8px }
+.dpaper .dnote{
+  margin:22px 0 0; padding:15px 16px 16px; border-radius:10px;
+  background:rgba(120,95,60,.075); border-left:3px solid rgba(120,95,60,.35);
+}
+.dpaper .dn-t{
+  font-size:15px; line-height:1.95; color:#33261a; text-indent:1.6em;
+  font-family:"Kaiti SC","STKaiti","KaiTi",serif;
+}
+.dpaper .dn-h{ color:#8a7455 }
+.dpaper .dn-by{ color:#a08e72 }
+.dpaper .dmeta{ color:#7a6a52 }
+.dpaper .dtitle{ color:#3a2c1c }
+.dpaper .dt-u{ color:#8a7455 }
+.dpaper .dt-n{ color:#3a2c1c }
+.dpaper .tl-x{ color:#3a2c1c }
+.dpaper .tl-t{ color:#8a7455 }
+.dpaper .tl-place{ color:#6b5940 }
+.dpaper .draw-btn{ color:#5a4a33 }
+.dpaper .trail-line{ color:#6b5940 }
+.dpaper .trail-line b{ color:#4a3a24 }
+/* 情绪映射的排版差异（覆盖里也要带上，否则被旧规则抹平） */
+.dpaper[data-mood="irrit"] .dtp{ line-height:1.95; letter-spacing:.01em }
+.dpaper[data-mood="irrit"] .dtp:nth-child(odd){ margin-left:14px }
+.dpaper[data-mood="irrit"] .dtp:nth-child(3n){ margin-left:-6px; text-indent:.6em }
+.dpaper[data-mood="collapse"] .dtp{ line-height:1.85; font-size:15.5px }
+.dpaper[data-mood="collapse"] .dtp:nth-child(2n){ margin-left:22px; transform:rotate(-.35deg) }
+.dpaper[data-mood="collapse"] .dtp:nth-child(3n){ margin-left:-10px; transform:rotate(.4deg) }
+.dpaper.ink-open .dtp{ transform:skewX(-1.1deg) }
+.dpaper.ink-open .dtp:nth-child(2n){ transform:skewX(.9deg) }
 </style>
 </head>
 <body>
