@@ -1696,6 +1696,79 @@ function extraMerge(records){
   if(add) extraSave(arr);
   return add;
 }
+/* ============================================================
+   注意：下面这几个函数原先被埋在 <style> 块里（CSS 解析器会静默跳过），
+   所以它们从来没有真正定义过。只有"有桌游记录"时才会调用到 extraBlock，
+   于是平时看不出问题，一玩过桌游日记就打不开了。这里补回主脚本。
+   ============================================================ */
+/* 未来日期提示 */
+function showFutureToast(key){
+  var el = document.getElementById('ftoast');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'ftoast'; el.className = 'ftoast';
+    document.body.appendChild(el);
+  }
+  var d = parseInt(key.slice(8,10),10), m = parseInt(key.slice(5,7),10);
+  el.innerHTML = '<b>时间尚未抵达</b><span>' + m + ' 月 ' + d + ' 日还没有发生</span>';
+  el.classList.add('on');
+  clearTimeout(el._t);
+  el._t = setTimeout(function(){ el.classList.remove('on'); }, 2200);
+}
+
+function isPrivate(t){ return PRIVATE_RE.test(t); }
+
+function tlItems(items){
+  return items.map(function(it, i){
+    var h = parseInt(it.time.slice(0,2),10);
+    var night = (h < 6 || h >= 22);
+    var priv = isPrivate(it.text);
+    return '<div class="tl' + (night ? ' tl-night' : '') + (priv ? ' tl-priv' : '') + '">'
+      + '<div class="tl-t">' + it.time + '</div>'
+      + '<div class="tl-dot"></div>'
+      + '<div class="tl-card">'
+        + (priv
+            ? '<div class="lockbar" data-unlock="' + i + '"><span class="lk">🔒</span>'
+              + '<span class="lkt">这一段她锁起来了</span><span class="lkh">点一下打开</span></div>'
+              + '<div class="locked-text" data-text="' + i + '">' + it.text + '</div>'
+            : it.text)
+      + '</div></div>';
+  }).join('');
+}
+
+/* ---------- 界外记录板块 ---------- */
+function pickBySeed(arr, seed){ return arr[Math.abs(seed) % arr.length]; }
+
+function extraBlock(list){
+  if(!list || !list.length) return '';
+  var rows = list.map(function(r){
+    var isReb = (r.outcome === 'rebuild');
+    var mood = r.mood || (currentMood() || {}).level || 'calm';
+    var byMood = isReb
+      ? (REBUILD_TEXT_MOOD[mood] || null)
+      : ((OUTCOME_TEXT_MOOD[mood] || {})[r.outcome] || null);
+    var t = byMood || (isReb ? REBUILD_TEXT : (OUTCOME_TEXT[r.outcome] || OUTCOME_TEXT.quit));
+    var txt = pickBySeed(t, (r.at || 0) % 997);
+    var icon = OUTCOME_ICON[r.outcome] || '…';
+    var cn = OUTCOME_CN[r.outcome] || '';
+    var detail = isReb
+      ? '用了构筑权 · 她改了开局'
+      : ('第 ' + (r.turns||'?') + ' 回合 · 深渊 ' + (r.abyss != null ? r.abyss : '?') + '/12'
+         + (r.turnLimit ? '（上限 ' + r.turnLimit + '）' : ''));
+    return '<li class="xr xr-' + (r.outcome||'quit') + '">'
+      + '<span class="xt">' + (r.time || '--:--') + '</span>'
+      + '<span class="xx">'
+        + '<b><i class="xi">' + icon + '</i>' + cn + '</b>'
+        + '<span class="xd">' + txt + '</span>'
+        + '<span class="xm">' + detail + '</span>'
+      + '</span></li>';
+  }).join('');
+  return '<div class="xblock">'
+    + '<div class="xh"><span class="xo">⚄</span>界外记录'
+    + '<span class="xnote">发生在梦里，不属于这一天的主线</span></div>'
+    + '<ul class="xlist">' + rows + '</ul></div>';
+}
+
 function extraByDate(date){
   return extraLoad().filter(function(r){ return r.date === date; })
     .sort(function(a,b){ return (a.at||0) - (b.at||0); });
@@ -1844,6 +1917,12 @@ const HOLIDAY = {
   '06-01':'儿童节','10-01':'国庆节','12-25':'圣诞',
   '09-15':'中秋','10-06':'中秋假',
 };
+/* 日期标签：只用来取节假日名。
+   原先 fmtDay 只在已经废掉的日历函数里被引用过，实际上从来没有定义 ——
+   我把它的用法抄进新日记，页面就直接崩了。补上。 */
+function fmtDay(date){
+  return { tag: holidayOf(date) || '' };
+}
 function holidayOf(date){
   if(!date) return null;
   var k = date.slice(5);
