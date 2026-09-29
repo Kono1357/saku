@@ -1659,8 +1659,13 @@ ul.xlist .xr-rebuild{background:linear-gradient(90deg,rgba(160,110,210,.10),tran
    这里补上：内容限宽居中 + 三档断点 + 动态视口高度。
    ============================================================ */
 :root{
-  /* 手机浏览器地址栏会占用高度，dvv 能让布局跟着变，不会顶出去 */
-  --vh: 100dvh;
+  /* 手机浏览器的地址栏会占掉一块高度：dvh 会跟着变，vh 不会。
+     老的浏览器（Chrome <108 / Safari <15.4）不认 dvh，所以先给 vh 兜底，
+     下一行再覆盖成 dvh —— 认得的用新的，不认的也不会塌。 */
+  --vh: 100vh;
+}
+@supports (height:100dvh){
+  :root{ --vh: 100dvh }
 }
 body{ height:var(--vh) }
 #home{ height:var(--vh); padding:calc(var(--safe-top) + 14px) 20px calc(var(--safe-bot) + 14px) }
