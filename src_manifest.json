@@ -14,8 +14,6 @@
  "ascii/saku-ascii.json",
  "ascii/scenes.py",
  "daemon.sh",
- "diary_pools.json",
- "diary_pools_v2.json",
  "engine/saku-engine.js",
  "ensure.sh",
  "game/maze.html",
