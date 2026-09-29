@@ -1594,11 +1594,24 @@ function holidayOf(date){
 /* 私密判定 */
 const PRIVATE_RE = /腿夹紧|身体莫名|不敢多看|羞耻|隐秘|那一小块皮肤|指尖擦过腰|对着镜子看很久|想被抱住|皮肤的|深夜身体|对自己身体|换衣服时|体育课后换衣服|洗澡时她不敢|把腿|悸动/;
 const INTENSE_RE = /解离|透明的影子|不像自己的|借来的|往下沉|暂停|空屋子|忘了自己|认不出|没有感觉|隔着一层|碎|裂|不存在/;
-function kindOf(text){
+function kindOf(text, item){
+  // 引擎打了标记的优先（private:true 来自外部私密池）
+  if(item && item.priv){
+    if(item.priv === 'self_exploration' || item.priv === 'secret_purchase') return 'secret';
+    if(item.priv === 'forbidden_touch') return 'secret';
+  }
+  if(item && item.private) return 'secret';
+  if(!text) return 'normal';
   if(PRIVATE_RE.test(text)) return 'secret';
   if(INTENSE_RE.test(text) || /撑不住|喘不过气|哭|崩/.test(text)) return 'intense';
   return 'normal';
 }
+/* 私密类型的标签（用于解锁后的角标） */
+const PRIV_CN = {
+  self_exploration: '不能见光的秘密',
+  secret_purchase:  '不能见光的秘密',
+  forbidden_touch:  '不能见光的秘密',
+};
 const KIND_CN = { secret:'隐秘的念头', intense:'压力', normal:'日常' };
 
 let CAL_Y = null, CAL_M = null, CAL_SEL = null;
@@ -1636,6 +1649,9 @@ function renderCalendar(){
   var body = $('viewBody');
   var map;
   try{ map = dayMap(); }catch(e){ body.innerHTML = '<div class="empty">日历暂时翻不开。</div>'; return; }
+  /* 私密池挂载状态（放页脚，方便确认 JSON 是否读到） */
+  var ps = null;
+  try{ ps = (window.Saku && Saku.privStats) ? Saku.privStats() : null; }catch(e){}
   var now = new Date(Date.now() + clockSkew);
   if(CAL_Y == null){ CAL_Y = now.getFullYear(); CAL_M = now.getMonth(); }
   var first = new Date(CAL_Y, CAL_M, 1);
@@ -1677,7 +1693,9 @@ function renderCalendar(){
       + '<span>🌕 圆月</span><span>🌓 细月</span><span>🌘 暗月</span>'
       + '<span>🌑 裂月</span><span>🌒 血月</span><span>🔒 有私密</span><span>⚄ 桌游</span>'
     + '</div>'
-    + '<div class="cal-tip">点任意日期，看那天她走过了哪里</div>';
+    + '<div class="cal-tip">点任意日期，看那天她走过了哪里</div>'
+    + (ps ? '<div class="cal-priv">私密池：自省 ' + ps.self_exploration
+        + ' · 包裹 ' + ps.secret_purchase + ' · 触碰 ' + ps.forbidden_touch + '</div>' : '');
 
   $('calPrev').onclick = function(){ sfx('click'); CAL_M--; if(CAL_M < 0){ CAL_M = 11; CAL_Y--; } renderCalendar(); };
   $('calNext').onclick = function(){ sfx('click'); CAL_M++; if(CAL_M > 11){ CAL_M = 0; CAL_Y++; } renderCalendar(); };
@@ -2441,6 +2459,10 @@ async function boot(serverMode){
       var px = await fetch('/ascii/plan.json', {cache:'no-store'}).then(x => x.json()).catch(() => null);
       if(px){ PLAN = px.plan; PLACES = px.places; }
       var raw = await fetch('/ascii/saku-data.json', {cache:'no-store'}).then(x => x.json()).catch(() => null);
+      try{
+        var pp = await fetch('/private_pool.json', {cache:'no-store'}).then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; });
+        if(pp && window.Saku && Saku.mountPrivate) Saku.mountPrivate(pp);
+      }catch(e3){}
       if(raw && window.Saku){
         RAW = raw;
         var g = Saku.feed(WORLD_START, new Date(), raw);
@@ -2486,6 +2508,11 @@ async function boot(serverMode){
         }catch(e0){}
       }
       if(!window.Saku) throw new Error('引擎没有加载');
+      // 外部私密文本池（可选；没有也不影响）
+      try{
+        var ppRaw = await fetch('private_pool.json', {cache:'no-store'}).then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; });
+        if(ppRaw && Saku.mountPrivate) Saku.mountPrivate(ppRaw);
+      }catch(e3){}
       var fresh = Saku.feed(WORLD_START, new Date(), d);
       var emoMap = (Saku.emoByDay ? Saku.emoByDay() : {}) || {};
       DATA = { days: fresh.days, bornAt: fresh.bornAt, total: fresh.total, emoByDay: emoMap,
