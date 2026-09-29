@@ -79,6 +79,7 @@ body{
 .app[data-app="calendar"] .ico{background:rgba(180,205,240,.15)}
 .app[data-app="game"] .ico{background:rgba(240,180,150,.15)}
 .app[data-app="wall"] .ico{background:rgba(150,220,210,.14)}
+.app[data-app="drop"] .ico{background:rgba(200,170,140,.16)}
 .app[data-app="about"] .ico{background:rgba(200,200,215,.13)}
 
 /* 图标网格 */
@@ -899,6 +900,30 @@ ul.xlist .xr-rebuild{background:linear-gradient(90deg,rgba(160,110,210,.10),tran
 .dev-warn span{font-size:12.5px;line-height:1.75;color:#f0c8c4}
 .dev-warn b{color:#ff9b90;letter-spacing:.5px}
 
+/* ---------- 投递箱 ---------- */
+.dropzone{
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  border:2px dashed rgba(201,170,140,.45);border-radius:16px;
+  padding:30px 16px;cursor:pointer;background:rgba(255,255,255,.028);
+  transition:background .18s, border-color .18s, transform .18s;
+}
+.dropzone.over{background:rgba(201,170,140,.14);border-color:rgba(201,170,140,.8);transform:scale(1.01)}
+.dropzone:active{background:rgba(255,255,255,.07)}
+.dropzone input{display:none}
+.dz-ico{font-size:30px;line-height:1}
+.dz-t{font-size:15px;color:#e0d6c4;letter-spacing:1px}
+.dz-s{font-size:11.5px;color:var(--dim2)}
+.drop-bar{height:4px;border-radius:2px;background:rgba(255,255,255,.06);margin-top:12px;overflow:hidden;display:none}
+.drop-bar.on{display:block}
+.drop-bar > i{display:block;height:100%;width:0;background:linear-gradient(90deg,#c9a95e,#e8dcb4);transition:width .2s}
+.drop-log{margin-top:12px;font-size:12.5px;line-height:2}
+.dl-line{color:var(--dim2);word-break:break-all}
+.dl-line.ok{color:#7fc79a}
+.dl-line.err{color:#e0837c}
+.drop-list{display:flex;flex-direction:column;gap:5px;font-size:12.5px;max-height:220px;overflow:auto}
+.drop-item{border-left:3px solid rgba(201,169,94,.6);padding:3px 0 3px 9px;color:#cdd7e8;word-break:break-all}
+.drop-item .di-n{font-family:ui-monospace,Menlo,monospace;font-size:12px}
+
 /* ---------- 开发者模式 ---------- */
 .dev-stat{display:flex; gap:14px; flex-wrap:wrap; margin:10px 0 4px}
 .dev-stat span{font-size:12.5px; color:var(--dim2)}
@@ -1107,6 +1132,7 @@ const APPS = [
   {id:'calendar',ico:'▦', name:'日历'},
   {id:'game',    ico:'⚄', name:'桌游'},
   {id:'diary',   ico:'✎', name:'日记'},
+  {id:'drop',    ico:'📥', name:'投递箱'},
   {id:'wall',    ico:'▧', name:'壁纸'},
   {id:'about',   ico:'◌', name:'关于'},
   {id:'dev',     ico:'⚙', name:'开发者', hidden:true},
@@ -1524,6 +1550,7 @@ function showView(id, originEl){
   body.classList.remove('short');
   if(id === 'diary') renderDiary();
   else if(id === 'calendar') renderCalendar();
+  else if(id === 'drop') renderDrop();
   else if(id === 'wall') renderWall();
   else if(id === 'dev') devRender();
   else if(id === 'about') renderAbout();
@@ -2355,6 +2382,121 @@ function devRender(){
     var h = f.querySelector('.fold-h');
     h.onclick = function(){ f.classList.toggle('open'); sfx('click'); };
   });
+}
+
+/* ============================================================
+   投递箱：把手机里的文件送进容器
+   静态托管的加密版没法接收上传，所以统一投到本机 8088 的收件口。
+   ============================================================ */
+const DROP_BASE = (location.protocol === 'http:' && location.port === '8088')
+  ? '' : 'http://127.0.0.1:8088';
+
+function renderDrop(){
+  $('viewBody').innerHTML = `
+    <div class="card hl"><h3>投递箱</h3>
+      <p style="font-size:13.5px;color:var(--dim);line-height:1.85">
+        从手机里选文件送进来。收到的东西会落在容器的 <code>saku/upload/</code> 里，我就能读到。<br>
+        <b>json / 图片 / 文本都行</b>，单个文件最大 40 MB。
+      </p>
+    </div>
+
+    <label class="dropzone" id="dz">
+      <div class="dz-ico">📥</div>
+      <div class="dz-t">点击选择文件</div>
+      <div class="dz-s">或把文件拖到这里</div>
+      <input type="file" id="dzFile" multiple accept="*/*">
+    </label>
+
+    <div class="drop-bar" id="dzBar"><i></i></div>
+    <div class="drop-log" id="dzLog"></div>
+
+    <div class="card" style="margin-top:14px"><h3>已经收到的</h3>
+      <div id="dzList" class="drop-list"><span class="empty">（还没有）</span></div>
+      <div class="btns" style="margin-top:10px">
+        <button class="dev-btn" id="dzRefresh">刷新列表</button>
+      </div>
+    </div>`;
+
+  var file = $('dzFile');
+  var dz = $('dz');
+
+  dz.addEventListener('dragover', function(e){ e.preventDefault(); dz.classList.add('over'); });
+  dz.addEventListener('dragleave', function(){ dz.classList.remove('over'); });
+  dz.addEventListener('drop', function(e){
+    e.preventDefault(); dz.classList.remove('over');
+    if(e.dataTransfer && e.dataTransfer.files.length) uploadAll(e.dataTransfer.files);
+  });
+  file.addEventListener('change', function(){
+    if(file.files && file.files.length) uploadAll(file.files);
+  });
+  $('dzRefresh').onclick = function(){ sfx('click'); loadDropList(); };
+
+  loadDropList();
+}
+
+function uploadAll(files){
+  var list = Array.prototype.slice.call(files);
+  var bar = $('dzBar'), log = $('dzLog');
+  bar.classList.add('on');
+  log.innerHTML = '';
+  var i = 0;
+
+  function next(){
+    if(i >= list.length){
+      bar.classList.remove('on');
+      try{ sfx('good'); }catch(e){}
+      loadDropList();
+      return;
+    }
+    var f = list[i++];
+    var line = document.createElement('div');
+    line.className = 'dl-line';
+    line.textContent = '↑ ' + f.name + '  (' + (f.size/1024).toFixed(0) + ' KB)';
+    log.appendChild(line);
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', DROP_BASE + '/upload', true);
+    xhr.setRequestHeader('X-Filename', encodeURIComponent(f.name));
+    xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+    xhr.upload.onprogress = function(e){
+      if(e.lengthComputable) bar.firstElementChild.style.width = (e.loaded/e.total*100).toFixed(0) + '%';
+    };
+    xhr.onload = function(){
+      var r = {};
+      try{ r = JSON.parse(xhr.responseText); }catch(e){}
+      if(xhr.status === 200 && r.ok){
+        line.className = 'dl-line ok';
+        line.textContent = '✓ ' + r.name + '  (' + (r.size/1024).toFixed(0) + ' KB)';
+        try{ sfx('coin'); }catch(e){}
+      } else {
+        line.className = 'dl-line err';
+        line.textContent = '✗ ' + f.name + ' — ' + (r.result || r.error || xhr.status);
+      }
+      next();
+    };
+    xhr.onerror = function(){
+      line.className = 'dl-line err';
+      line.textContent = '✗ 连不上收件口。确认手机和容器在同一台机器上（' + DROP_BASE + '）';
+      next();
+    };
+    xhr.send(f);
+  }
+  next();
+}
+
+function loadDropList(){
+  var el = $('dzList');
+  if(!el) return;
+  fetch(DROP_BASE + '/api/uploaded', {cache:'no-store'})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var fs = (d && d.files) || [];
+      if(!fs.length){ el.innerHTML = '<span class="empty">（还没有）</span>'; return; }
+      el.innerHTML = fs.map(function(n){
+        return '<div class="drop-item"><span class="di-n">' + n + '</span></div>';
+      }).join('');
+    })
+    .catch(function(){ el.innerHTML = '<span class="empty">收件口没应答（' + DROP_BASE + '）</span>'; });
 }
 
 /* ---------- 壁纸 ---------- */
