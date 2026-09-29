@@ -306,16 +306,37 @@ function closeSheet(){
   CAL_SEL = null;
 }
 /* 时间轴卡片 */
+/* 私密记录：深夜的隐秘念头 / 身体感受 —— 默认上锁 */
+const PRIVATE_RE = /腿夹紧|身体莫名|洗澡时她不敢|羞耻|隐秘|那一小块皮肤|指尖擦过腰|对着镜子看很久|不敢多看|想被抱住|渴望|皮肤的|半夜里|深夜身体|对自己身体|某种意志/;
+function isPrivate(t){ return PRIVATE_RE.test(t); }
+
 function tlItems(items){
-  return items.map(function(it){
+  return items.map(function(it, i){
     var h = parseInt(it.time.slice(0,2),10);
     var night = (h < 6 || h >= 22);
-    return '<div class="tl' + (night ? ' tl-night' : '') + '">'
+    var priv = isPrivate(it.text);
+    return '<div class="tl' + (night ? ' tl-night' : '') + (priv ? ' tl-priv' : '') + '">'
       + '<div class="tl-t">' + it.time + '</div>'
       + '<div class="tl-dot"></div>'
-      + '<div class="tl-card">' + it.text + '</div>'
-      + '</div>';
+      + '<div class="tl-card">'
+        + (priv
+            ? '<div class="lockbar" data-unlock="' + i + '"><span class="lk">🔒</span>'
+              + '<span class="lkt">这一段她锁起来了</span><span class="lkh">点一下打开</span></div>'
+              + '<div class="locked-text" data-text="' + i + '">' + it.text + '</div>'
+            : it.text)
+      + '</div></div>';
   }).join('');
+}
+function bindLocks(root){
+  if(!root) return;
+  root.querySelectorAll('.lockbar').forEach(function(b){
+    b.onclick = function(){
+      var i = b.dataset.unlock;
+      var t = root.querySelector('[data-text="' + i + '"]');
+      if(t){ t.classList.add('on'); b.classList.add('opened'); sfx('coin'); }
+      setTimeout(function(){ b.style.display = 'none'; }, 320);
+    };
+  });
 }
 function openDaySheet(key, rec){
   var el = sheetEl();
@@ -334,6 +355,17 @@ function openDaySheet(key, rec){
   }
   if(rec && rec.extra && rec.extra.length) html += extraBlock(rec.extra);
   body.innerHTML = html;
+  bindLocks(body);
+  (function(){
+    var el = $('dmoon'); if(!el) return;
+    var lv = 'calm', pd = false;
+    try{
+      var em = (window.__SAKU_EMO_BY_DAY || {})[day.date];
+      if(em){ lv = em.level; pd = !!em.period; }
+    }catch(e){}
+    var m = moonOf(lv, pd);
+    el.innerHTML = '<span class="mg">' + m.g + '</span>' + m.cn;
+  })();
   body.scrollTop = 0;
   el.classList.add('on');
   sfx('openapp');
@@ -569,6 +601,24 @@ ul.xlist .xr-rebuild{background:linear-gradient(90deg,rgba(160,110,210,.10),tran
 .dl-tail{background:rgba(127,199,154,.16); color:#8fd4ab}
 .dl-warn{background:rgba(192,112,106,.18); color:#e0a09a}
 
+/* ---------- 加锁的私密记录 ---------- */
+.tl-priv .tl-card{background:linear-gradient(180deg,rgba(140,110,180,.11),rgba(140,110,180,.03));
+  border-color:rgba(160,130,200,.22)}
+.tl-priv .tl-dot{background:rgba(170,140,210,.65); box-shadow:0 0 0 3px rgba(170,140,210,.13)}
+.lockbar{display:flex; align-items:center; gap:9px; cursor:pointer; padding:2px 0;
+  color:#b7a6d4; font-size:13px; letter-spacing:.5px}
+.lockbar .lk{font-size:15px}
+.lockbar .lkt{flex:1}
+.lockbar .lkh{font-size:11.5px; color:var(--dim2)}
+.lockbar.opened{opacity:0; transition:opacity .3s}
+.locked-text{display:none; font-size:14px; line-height:1.85; color:#e2e9f5; animation:unlockIn .45s ease-out}
+.locked-text.on{display:block}
+@keyframes unlockIn{from{opacity:0; filter:blur(6px); transform:translateY(-4px)}to{opacity:1; filter:none; transform:none}}
+.dmoon{display:flex; align-items:center; gap:5px; margin-left:auto}
+.dmoon .mg{font-size:15px; line-height:1}
+.cal-cell .ph{position:absolute; top:3px; left:4px; font-size:9.5px; opacity:.85}
+.cal-cell.holiday{border-color:rgba(201,185,143,.55); border-width:2px}
+
 /* ---------- 日历 ---------- */
 .cal-head{
   display:flex; align-items:center; gap:12px; margin-bottom:14px;
@@ -714,7 +764,6 @@ ul.xlist .xr-rebuild{background:linear-gradient(90deg,rgba(160,110,210,.10),tran
 <script src="saku-data.enc.js"></script>
 <script src="saku-ascii.enc.js"></script>
 <script src="maze.enc.js"></script>
-<script src="saku-engine.enc.js"></script>
 <script>
 /* =====================================================================
    朔 · 观察窗口（手机桌面风格）
@@ -1183,6 +1232,18 @@ function line(t, text){
   return li;
 }
 /* ---------- 日记 ---------- */
+/* 月相：阴晴圆缺。情绪越差，月亮越残缺；崩溃是裂月，生理痛是血月 */
+const MOON_PHASE = {
+  glow:     { g:'🌕', cn:'圆月' },
+  calm:     { g:'🌓', cn:'上弦' },
+  irrit:    { g:'🌘', cn:'残月' },
+  collapse: { g:'🌑', cn:'裂月' },
+  period:   { g:'🌒', cn:'血月' },
+};
+function moonOf(level, period){
+  if (period) return MOON_PHASE.period;
+  return MOON_PHASE[level] || MOON_PHASE.calm;
+}
 const MOODS = [
   '有点累。但还好。','还行吧。','……没什么特别的。','就这样。','一般。',
   '今天不太想说话。','没什么，习惯了。','还好，一个人也可以。',
