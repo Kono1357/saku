@@ -1020,6 +1020,294 @@ ul.xlist .xr-rebuild{background:linear-gradient(90deg,rgba(160,110,210,.10),tran
 .arc-week .arc-row{border-radius:0; margin:0}
 .arc-week .arc-row + .arc-row{border-top:1px solid rgba(240,230,210,.05)}
 /* ---------- 档案（已归档的报告） ---------- */
+/* ---------- 沙盒提示条 ---------- */
+.sandbox-bar{
+  position:fixed; top:0; left:0; right:0; z-index:9999;
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  padding:9px 14px; font-size:13px; letter-spacing:.06em;
+  background:linear-gradient(180deg,rgba(168,57,44,.97),rgba(140,42,32,.95));
+  color:#ffe9e4; font-family:-apple-system,"PingFang SC",sans-serif;
+  box-shadow:0 2px 14px rgba(0,0,0,.5);
+}
+.sb-dot{width:7px;height:7px;border-radius:50%;background:#ffd9d0;
+  animation:sbPulse 1.4s ease-in-out infinite}
+@keyframes sbPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
+
+/* ============================================================
+   日记：真正的纸
+   米色纸底 + 深色衬线字，按当天情绪换排版气质
+   ============================================================ */
+.dpaper{
+  position:relative; overflow:hidden; border-radius:14px;
+  padding:26px 22px 24px;
+  background:
+    radial-gradient(rgba(150,120,80,.05) 1px, transparent 1px) 0 0/13px 13px,
+    linear-gradient(178deg,#f4ead6 0%,#efe3cb 55%,#e9dcc0 100%);
+  box-shadow:0 3px 18px rgba(0,0,0,.45), inset 0 0 60px rgba(150,120,80,.10);
+  color:#2b2117;
+}
+/* 纸的毛边 */
+.dpaper::before{
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background:radial-gradient(ellipse at 12% 8%, rgba(120,95,60,.10), transparent 42%),
+             radial-gradient(ellipse at 88% 92%, rgba(120,95,60,.09), transparent 46%);
+}
+.dmeta{display:flex; align-items:center; gap:9px; margin-bottom:14px;
+  font-family:-apple-system,"PingFang SC",sans-serif; font-size:11.5px; color:#7a6a52}
+.dmeta .sp{flex:1}
+.dm-moon{display:inline-flex; align-items:center; gap:4px}
+.dm-lock{font-style:normal; margin-left:3px; font-size:10px}
+
+.dtitle{display:flex; align-items:baseline; gap:3px; margin-bottom:20px;
+  color:#3a2c1c; font-family:"Songti SC","STSong",serif; letter-spacing:.04em}
+.dt-n{font-size:34px; font-weight:600; line-height:1}
+.dt-u{font-size:14px; color:#8a7455; margin:0 5px 0 1px}
+
+/* 正文：有呼吸感 */
+.dtxt{margin:0 0 8px}
+.dtp{
+  margin:0 0 17px; padding-left:1.2em; text-indent:-0.6em;
+  font-family:"Kaiti SC","STKaiti","KaiTi","Songti SC",serif;
+  font-size:16px; line-height:2.15; color:#2b2117;
+  letter-spacing:.02em;
+}
+.dtp:last-child{margin-bottom:4px}
+.dtp-empty{color:#9a8straight; font-style:italic}
+
+/* ---- 情绪映射：平静 → 工整留白；烦躁/崩溃 → 错落、压暗 ---- */
+.dpaper[data-mood="irrit"]{
+  background:
+    radial-gradient(rgba(150,120,80,.07) 1px, transparent 1px) 0 0/11px 11px,
+    linear-gradient(176deg,#e9dcc2 0%,#e2d4b6 60%,#dbcaa8 100%);
+  box-shadow:0 3px 18px rgba(0,0,0,.5), inset 0 0 70px rgba(110,80,50,.18);
+}
+.dpaper[data-mood="irrit"] .dtp{ line-height:1.95; letter-spacing:.01em }
+.dpaper[data-mood="irrit"] .dtp:nth-child(odd){ margin-left:14px }
+.dpaper[data-mood="irrit"] .dtp:nth-child(3n){ margin-left:-6px; text-indent:.6em }
+
+.dpaper[data-mood="collapse"]{
+  background:
+    radial-gradient(rgba(120,95,65,.09) 1px, transparent 1px) 0 0/9px 9px,
+    linear-gradient(174deg,#ddd0b4 0%,#d3c3a4 55%,#c9b795 100%);
+  box-shadow:0 3px 18px rgba(0,0,0,.55), inset 0 0 90px rgba(90,60,35,.26);
+}
+.dpaper[data-mood="collapse"] .dtp{ line-height:1.85; font-size:15.5px }
+.dpaper[data-mood="collapse"] .dtp:nth-child(2n){ margin-left:22px; transform:rotate(-.35deg) }
+.dpaper[data-mood="collapse"] .dtp:nth-child(3n){ margin-left:-10px; transform:rotate(.4deg) }
+/* 崩溃日的涂改痕迹 */
+.dpaper[data-mood="collapse"] .dtp:nth-child(3)::after{
+  content:''; display:block; height:1.5px; margin-top:-8px; width:72px;
+  background:linear-gradient(90deg, rgba(90,60,35,.42), rgba(90,60,35,.06));
+  transform:rotate(-1.6deg);
+}
+
+/* 随笔 */
+.dnote{
+  margin:22px 0 0; padding:15px 16px 16px; border-radius:10px;
+  background:rgba(120,95,60,.075);
+  border-left:3px solid rgba(120,95,60,.35);
+}
+.dn-h{display:flex; align-items:center; gap:6px; font-size:11px; color:#8a7455;
+  letter-spacing:.18em; margin-bottom:8px; font-family:-apple-system,"PingFang SC",sans-serif}
+.dn-h .sp{flex:1}
+.dn-by{font-size:10px; color:#a08e72; letter-spacing:.05em}
+.dn-t{font-size:15px; line-height:1.95; color:#33261a; text-indent:1.6em;
+  font-family:"Kaiti SC","STKaiti","KaiTi",serif}
+
+/* ---- 墨迹封层：私密的一天 ---- */
+.inkveil{
+  position:absolute; inset:0; z-index:5; cursor:pointer;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:14px; overflow:hidden; border-radius:14px;
+  background:rgba(28,22,16,.30);
+  -webkit-user-select:none; user-select:none;
+  transition:opacity .5s ease, backdrop-filter .5s;
+}
+.inkveil.gone{opacity:0; pointer-events:none; backdrop-filter:blur(0)}
+.inkblot{
+  position:absolute; border-radius:48% 52% 55% 45% / 52% 46% 54% 48%;
+  background:radial-gradient(circle at 38% 34%, rgba(22,18,14,.94), rgba(12,10,8,.99) 72%);
+  filter:blur(1.2px); animation:inkDrift 9s ease-in-out infinite;
+}
+.inkblot:nth-child(1){width:58%; height:46%; top:12%; left:4%;  animation-delay:0s}
+.inkblot:nth-child(2){width:52%; height:40%; top:44%; left:34%; animation-delay:-2.4s}
+.inkblot:nth-child(3){width:44%; height:38%; top:8%;  left:52%; animation-delay:-4.1s}
+.inkblot:nth-child(4){width:48%; height:34%; top:62%; left:8%;  animation-delay:-6.3s}
+.inkblot:nth-child(5){width:36%; height:30%; top:30%; left:26%; animation-delay:-1.2s}
+@keyframes inkDrift{
+  0%,100%{transform:translate(0,0) rotate(0) scale(1)}
+  33%    {transform:translate(3px,-4px) rotate(2deg) scale(1.03)}
+  66%    {transform:translate(-3px,3px) rotate(-2deg) scale(.98)}
+}
+.inkctr{position:relative; z-index:2; text-align:center; color:#e7dcc6}
+.inklock{font-size:30px; filter:drop-shadow(0 2px 8px rgba(0,0,0,.7))}
+.inktip{font-size:12px; letter-spacing:.16em; opacity:.78; margin-top:9px;
+  font-family:-apple-system,"PingFang SC",sans-serif}
+.inkbar{
+  width:132px; height:3px; margin:13px auto 0; border-radius:2px;
+  background:rgba(240,230,210,.22); overflow:hidden;
+}
+.inkbar > i{display:block; height:100%; width:var(--p,0%);
+  background:linear-gradient(90deg,#c9a95e,#f0e6d2); transition:width .06s linear}
+
+/* 解锁之后：手写时的轻微颤抖 */
+.dpaper.ink-open .dtxt{animation:inkShiver .55s ease-out}
+@keyframes inkShiver{
+  0%{transform:skewX(-1.6deg) translateX(-3px); opacity:.4}
+  40%{transform:skewX(.9deg) translateX(2px)}
+  70%{transform:skewX(-.5deg)}
+  100%{transform:none; opacity:1}
+}
+.dpaper.ink-open .dtp{transform:skewX(-1.1deg)}
+.dpaper.ink-open .dtp:nth-child(2n){transform:skewX(.9deg)}
+/* 解锁后月亮旁的暗红标记 */
+.dm-redmark{
+  display:inline-block; width:5px; height:5px; border-radius:50%;
+  background:#8f2d22; margin-left:5px; vertical-align:1px;
+  box-shadow:0 0 5px rgba(143,45,34,.75);
+}
+
+/* ---- 归档时间轴 ---- */
+.draw-wrap{margin-top:22px; border-top:1px solid rgba(120,95,60,.22); padding-top:14px}
+.draw-btn{
+  font:inherit; font-size:12.5px; padding:9px 15px; border-radius:8px; cursor:pointer;
+  background:rgba(120,95,60,.10); border:1px solid rgba(120,95,60,.28); color:#5a4a33;
+  font-family:-apple-system,"PingFang SC",sans-serif;
+}
+.draw-btn:hover{background:rgba(120,95,60,.17)}
+.draw-body{display:none; margin-top:16px}
+.draw-body.open{display:block}
+
+.trail-line{padding:10px 12px; border-radius:8px; background:rgba(120,95,60,.08);
+  border-left:3px solid rgba(120,95,60,.3)}
+.trail-line b{color:#4a3a24; font-weight:600}
+.tl{position:relative; padding-left:64px}
+.tl::before{
+  content:''; position:absolute; left:56px; top:7px; bottom:7px; width:1.5px;
+  background:linear-gradient(180deg, rgba(120,95,60,.06), rgba(120,95,60,.38), rgba(120,95,60,.06));
+}
+.tl-row{position:relative; display:flex; gap:11px; align-items:flex-start; padding:7px 0}
+.tl-t{position:absolute; left:-64px; width:50px; text-align:right;
+  font-family:ui-monospace,Menlo,monospace; font-size:11.5px; color:#8a7455;
+  font-variant-numeric:tabular-nums; padding-top:2px}
+.tl-dot{position:absolute; left:-13px; top:11px; width:8px; height:8px; border-radius:50%;
+  background:#efe3cb; border:1.5px solid rgba(120,95,60,.55)}
+.tl-row.night .tl-dot{background:#5a4a33; border-color:#3a2c1c}
+.tl-row.priv .tl-dot{background:#8f2d22; border-color:#6d2018}
+.tl-c{flex:1; min-width:0}
+.tl-place{
+  display:inline-block; font-size:10.5px; padding:1px 7px; border-radius:4px;
+  background:rgba(120,95,60,.14); color:#6b5940; margin-bottom:3px;
+  font-family:-apple-system,"PingFang SC",sans-serif; letter-spacing:.05em;
+}
+.tl-x{font-size:13.5px; line-height:1.78; color:#3a2c1c;
+  font-family:"Kaiti SC","STKaiti","KaiTi",serif}
+.tl-row.priv .tl-x{color:#7a5a50; font-style:italic}
+
+/* ---------- 投递箱 ---------- */
+.dropzone{
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  border:2px dashed rgba(201,170,140,.45);border-radius:16px;
+  padding:30px 16px;cursor:pointer;background:rgba(255,255,255,.028);
+  transition:background .18s, border-color .18s, transform .18s;
+}
+.dropzone.over{background:rgba(201,170,140,.14);border-color:rgba(201,170,140,.8);transform:scale(1.01)}
+.dropzone:active{background:rgba(255,255,255,.07)}
+.dropzone input{display:none}
+.dz-ico{font-size:30px;line-height:1}
+.dz-t{font-size:15px;color:#e0d6c4;letter-spacing:1px}
+.dz-s{font-size:11.5px;color:var(--dim2)}
+.drop-bar{height:4px;border-radius:2px;background:rgba(255,255,255,.06);margin-top:12px;overflow:hidden;display:none}
+.drop-bar.on{display:block}
+.drop-bar > i{display:block;height:100%;width:0;background:linear-gradient(90deg,#c9a95e,#e8dcb4);transition:width .2s}
+.drop-log{margin-top:12px;font-size:12.5px;line-height:2}
+.dl-line{color:var(--dim2);word-break:break-all}
+.dl-line.ok{color:#7fc79a}
+.dl-line.err{color:#e0837c}
+.drop-list{display:flex;flex-direction:column;gap:5px;font-size:12.5px;max-height:220px;overflow:auto}
+.drop-item{border-left:3px solid rgba(201,169,94,.6);padding:3px 0 3px 9px;color:#cdd7e8;word-break:break-all}
+.drop-item .di-n{font-family:ui-monospace,Menlo,monospace;font-size:12px}
+
+/* ---------- 开发者模式 ---------- */
+.dev-stat{display:flex; gap:14px; flex-wrap:wrap; margin:10px 0 4px}
+.dev-stat span{font-size:12.5px; color:var(--dim2)}
+.dev-stat b{font-size:17px; color:var(--accent); font-weight:600}
+.dev-btns{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px}
+.dev-btn{
+  border:1px solid rgba(201,185,143,.35); background:rgba(201,185,143,.11);
+  color:#e8dcb4; font-family:inherit; font-size:13px; border-radius:9px;
+  padding:8px 14px; cursor:pointer;
+}
+.dev-btn:active{transform:scale(.97); background:rgba(201,185,143,.2)}
+.dev-btn.dan{border-color:rgba(192,112,106,.5); background:rgba(192,112,106,.1); color:#e0a09a}
+.dev-item{
+  border:1px solid rgba(255,255,255,.07); border-radius:10px; padding:9px 11px;
+  margin-bottom:8px; background:rgba(255,255,255,.028);
+}
+.di-top{display:flex; align-items:baseline; gap:8px; margin-bottom:4px}
+.di-t{font-size:11.5px; color:#9d8f68; font-variant-numeric:tabular-nums}
+.di-p{font-size:11px; color:var(--dim2); border:1px solid var(--line); border-radius:999px; padding:0 7px}
+.di-x{font-size:14px; color:#e2e9f5; line-height:1.75}
+.di-layer{display:flex; gap:6px; flex-wrap:wrap; margin-top:7px}
+.dl{font-size:10.5px; border-radius:5px; padding:1px 7px; letter-spacing:.3px}
+.dl-scene{background:rgba(111,168,220,.16); color:#9cc6ea}
+.dl-size{background:rgba(255,255,255,.06); color:var(--dim2)}
+.dl-tail{background:rgba(127,199,154,.16); color:#8fd4ab}
+.dl-warn{background:rgba(192,112,106,.18); color:#e0a09a}
+
+/* ---------- 加锁的私密记录 ---------- */
+.tl-priv .tl-card{background:linear-gradient(180deg,rgba(140,110,180,.11),rgba(140,110,180,.03));
+  border-color:rgba(160,130,200,.22)}
+.tl-priv .tl-dot{background:rgba(170,140,210,.65); box-shadow:0 0 0 3px rgba(170,140,210,.13)}
+.lockbar{display:flex; align-items:center; gap:9px; cursor:pointer; padding:2px 0;
+  color:#b7a6d4; font-size:13px; letter-spacing:.5px}
+.lockbar .lk{font-size:15px}
+.lockbar .lkt{flex:1}
+.lockbar .lkh{font-size:11.5px; color:var(--dim2)}
+.lockbar.opened{opacity:0; transition:opacity .3s}
+.locked-text{display:none; font-size:14px; line-height:1.85; color:#e2e9f5; animation:unlockIn .45s ease-out}
+.locked-text.on{display:block}
+@keyframes unlockIn{from{opacity:0; filter:blur(6px); transform:translateY(-4px)}to{opacity:1; filter:none; transform:none}}
+.dmoon{display:flex; align-items:center; gap:5px; margin-left:auto}
+.dmoon .mg{font-size:15px; line-height:1}
+.cal-cell .ph{position:absolute; top:3px; left:4px; font-size:9.5px; opacity:.85}
+.cal-cell.holiday{border-color:rgba(201,185,143,.55); border-width:2px}
+
+/* ---------- 档案：月 / 周 折叠 ---------- */
+.arc-month{margin-bottom:10px; border-radius:12px; overflow:hidden;
+  background:rgba(240,230,210,.05); border:1px solid rgba(240,230,210,.07)}
+.arc-mh{display:flex; align-items:center; gap:9px; padding:13px 14px; cursor:pointer;
+  background:rgba(240,230,210,.06); transition:background .16s}
+.arc-mh:hover{background:rgba(240,230,210,.11)}
+.arc-mt{font-size:14.5px; color:#e2e6ee; letter-spacing:.06em; font-weight:600}
+.arc-mc{font-size:11.5px; color:#7b8494}
+.arc-mb{display:none; padding:2px 0 6px}
+.arc-month.open > .arc-mb{display:block}
+.arc-ar{font-size:9px; color:#8b94a3; width:10px; display:inline-block}
+.arc-week{margin:4px 8px; border-radius:9px; overflow:hidden; background:rgba(0,0,0,.16)}
+.arc-wh{display:flex; align-items:center; gap:9px; padding:9px 11px; cursor:pointer;
+  transition:background .16s}
+.arc-wh:hover{background:rgba(240,230,210,.07)}
+.arc-wt{font-size:12.5px; color:#aab3c2; letter-spacing:.03em}
+.arc-wc{font-size:11px; color:#6f7887}
+.arc-wb{display:none}
+.arc-week.open > .arc-wb{display:block}
+.arc-week .arc-row{border-radius:0; margin:0}
+.arc-week .arc-row + .arc-row{border-top:1px solid rgba(240,230,210,.05)}
+/* ---------- 档案（已归档的报告） ---------- */
+/* ---------- 沙盒提示条 ---------- */
+.sandbox-bar{
+  position:fixed; top:0; left:0; right:0; z-index:9999;
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  padding:9px 14px; font-size:13px; letter-spacing:.06em;
+  background:linear-gradient(180deg,rgba(168,57,44,.97),rgba(140,42,32,.95));
+  color:#ffe9e4; font-family:-apple-system,"PingFang SC",sans-serif;
+  box-shadow:0 2px 14px rgba(0,0,0,.5);
+}
+.sb-dot{width:7px;height:7px;border-radius:50%;background:#ffd9d0;
+  animation:sbPulse 1.4s ease-in-out infinite}
+@keyframes sbPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
+
 /* ---------- 日记：顶部的日期导航 ---------- */
 .dn-head{display:flex; align-items:center; gap:10px; padding:2px 2px 12px}
 .dn-title{font-size:19px; font-weight:600; letter-spacing:.14em; color:#e2e6ee}
@@ -1208,6 +1496,9 @@ ul.xlist .xr-rebuild{background:linear-gradient(90deg,rgba(160,110,210,.10),tran
 </style>
 </head>
 <body>
+<div id="sandboxBar" class="sandbox-bar" style="display:none">
+  <span class="sb-dot"></span>【平行宇宙推演中 / 数据未保存】
+</div>
 
 <!-- ================= 密码门 ================= -->
 <div id="gate">
@@ -1667,6 +1958,7 @@ function extraLoad(){
   }
 }
 function extraSave(arr){
+  if(SANDBOX) return;
   try{
     // 按日期裁剪 + 每天限量
     var byDay = {};
@@ -1680,7 +1972,19 @@ function extraSave(arr){
     localStorage.setItem(EXTRA_KEY, JSON.stringify(out));
   }catch(e){}
 }
+/* 沙盒（平行宇宙推演）里产生的一切都不许落盘 —— 那是推演，
+   不该污染真实世界的历史。 */
+let SANDBOX = false;
+function setSandbox(on){
+  SANDBOX = !!on;
+  try{
+    var bar = document.getElementById('sandboxBar');
+    if(bar) bar.style.display = SANDBOX ? 'flex' : 'none';
+    document.body.style.paddingTop = SANDBOX ? '38px' : '';
+  }catch(e){}
+}
 function extraMerge(records){
+  if(SANDBOX) return 0;
   if(!records || !records.length) return 0;
   var arr = extraLoad();
   var have = {};
@@ -1869,6 +2173,7 @@ function showView(id, originEl){
   requestAnimationFrame(() => host.classList.add('on'));
 }
 function closeView(){
+  if(VIEW === 'dev' && SANDBOX) setSandbox(false);
   sfx('closeapp');
   var host = $('viewHost');
   host.classList.remove('on');
@@ -2313,7 +2618,18 @@ function diaryLines(day){
   if(f.night)  add('DIARY_NIGHT', 'night');
   if(f.tired && !f.sick) add('DIARY_TIRED', 'tired2');
 
-  add('DIARY_END', 'end');
+  /* 玩过桌游的那天：不写"我玩了游戏"，
+     而是让它在日记里变成一段记不清的梦。 */
+  if(f.play) add('DIARY_DREAM_GAME', 'dream');
+
+  /* 收尾句按当天情绪分三种调子：
+       平静 → 平常的语气；烦躁/生理痛 → 破碎短句；崩溃 → 更短，甚至只是留白 */
+  var endPool = 'DIARY_END';
+  if(f.emo === 'collapse') endPool = 'DIARY_END_COLLAPSE';
+  else if(f.low || f.period) endPool = 'DIARY_END_IRRIT';
+  else if(f.good || f.emo === 'calm' || f.emo === 'glow') endPool = 'DIARY_END_CALM';
+  if(!(RAW && RAW[endPool] && RAW[endPool].length)) endPool = 'DIARY_END';   // 老数据兜底
+  add(endPool, 'end');
   /* 一天别写太长：留 3-6 段，挑出来的顺序保持"早上→夜里" */
   if(out.length > 6){
     var keep = [out[0]];
@@ -2404,23 +2720,36 @@ function renderDiary(){
     + '</div>' + nav;
 
   var lines = diaryLines(day);
+  /* 情绪决定排版气质：平静 = 工整留白，烦躁/崩溃 = 压暗、错落、带涂改 */
+  var moodAttr = (f.low) ? ((f.emo === 'collapse') ? 'collapse' : 'irrit') : 'calm';
 
-  html += '<div class="dpaper">'
+  html += '<div class="dpaper" data-mood="' + moodAttr + '" id="dpaper">'
     + '<div class="dmeta">'
       + '<span class="dm-w">' + day.weekday + (lab.tag ? ' · ' + lab.tag : '') + '</span>'
       + '<span class="dm-wx">' + weather + '</span>'
       + '<span class="dm-moon">' + moon.g + '<i>' + moon.cn + '</i>'
-        + (hasSecret ? '<em class="dm-lock">🔒</em>' : '') + '</span>'
+        + (hasSecret ? '<em class="dm-lock">🔒</em>' : '')
+        + (hasSecret ? '<em class="dm-redmark" id="dmRed"></em>' : '') + '</span>'
     + '</div>'
     + '<div class="dtitle"><span class="dt-n">' + mo + '</span><span class="dt-u">月</span>'
       + '<span class="dt-n">' + dd + '</span><span class="dt-u">日</span></div>';
 
+  html += '<div class="dtxt" id="dtxt">';
   if(lines.length){
-    html += '<div class="dtxt">';
     lines.forEach(function(t){ html += '<p class="dtp">' + esc(t) + '</p>'; });
-    html += '</div>';
   }else if(!items.length){
-    html += '<div class="dtxt"><p class="dtp dtp-empty">这一天什么也没记下。</p></div>';
+    html += '<p class="dtp dtp-empty">这一天什么也没记下。</p>';
+  }
+  html += '</div>';
+
+  /* 私密的一天：整段正文默认被墨迹盖住，长按才散开 */
+  if(hasSecret){
+    html += '<div class="inkveil" id="inkVeil">'
+      + '<i class="inkblot"></i><i class="inkblot"></i><i class="inkblot"></i>'
+      + '<i class="inkblot"></i><i class="inkblot"></i>'
+      + '<div class="inkctr"><div class="inklock">🔒</div>'
+      + '<div class="inktip">长按 1.5 秒打开</div>'
+      + '<div class="inkbar"><i></i></div></div></div>';
   }
 
   /* 她的随笔 */
@@ -2428,17 +2757,33 @@ function renderDiary(){
 
   /* 原始记录：默认收起，想看细节时再展开 */
   if(items.length){
+    var trail = trajectoryOfItems(items);        // 她这一天物理上走过哪
     html += '<div class="draw-wrap"><button class="draw-btn" id="dnRaw">'
-      + '当天的 ' + items.length + ' 条原始记录 ▾</button><div class="draw-body" id="dnRawBody">';
+      + '当天 ' + items.length + ' 条原始记录 ▾</button><div class="draw-body" id="dnRawBody">';
+    if(trail.length){
+      html += '<div class="trail-line" style="margin-bottom:13px;font-size:12.5px;color:#6b5940;'
+        + 'font-family:-apple-system,\'PingFang SC\',sans-serif">她走过：'
+        + trail.map(function(p){ return '<b>' + esc(p) + '</b>'; }).join(' → ') + '</div>';
+    }
+    html += '<div class="tl">';
     items.forEach(function(it){
       var h = parseInt(it.time.slice(0,2),10);
       var kind = kindOf(it.text);
-      html += '<div class="dpara' + ((h < 6 || h >= 22) ? ' dnight' : '')
-        + (kind !== 'normal' ? ' d-' + kind : '') + '">'
-        + '<span class="dp-t">' + it.time + '</span>'
-        + '<span class="dp-x">' + esc(it.text) + '</span></div>';
+      var night = (h < 6 || h >= 22);
+      // 从这条记录里推一个地点
+      var place = '';
+      for(var pi = 0; pi < PLACE_HINT.length; pi++){
+        if(PLACE_HINT[pi][0].test(it.text)){ place = PLACE_HINT[pi][1]; break; }
+      }
+      html += '<div class="tl-row' + (night ? ' night' : '') + (kind === 'secret' ? ' priv' : '') + '">'
+        + '<span class="tl-t">' + it.time + '</span>'
+        + '<span class="tl-dot"></span>'
+        + '<span class="tl-c">'
+          + (place ? '<span class="tl-place">' + esc(place) + '</span><br>' : '')
+          + '<span class="tl-x">' + (kind === 'secret' ? '（这一段她没有写清楚）' : esc(it.text)) + '</span>'
+        + '</span></div>';
     });
-    html += '</div></div>';
+    html += '</div></div></div>';
   }
   html += '</div>';
 
@@ -2487,8 +2832,60 @@ function renderDiary(){
   if(rb) rb.onclick = function(){
     var bd = $('dnRawBody');
     var on = bd.classList.toggle('open');
-    rb.textContent = '当天的 ' + items.length + ' 条原始记录 ' + (on ? '▴' : '▾');
+    rb.textContent = '当天 ' + items.length + ' 条原始记录 ' + (on ? '▴' : '▾');
     try{ sfx('click'); }catch(e){}
+  };
+  bindInkVeil();
+}
+
+/* 墨迹封层：长按 1.5 秒，墨散开，字露出来 */
+function bindInkVeil(){
+  var veil = $('inkVeil'), paper = $('dpaper');
+  if(!veil || !paper) return;
+  var bar = veil.querySelector('.inkbar > i');
+  var raf = null, t0 = 0;
+  var DUR = 1500;
+
+  function reset(){
+    if(raf) cancelAnimationFrame(raf);
+    raf = null;
+    if(bar) bar.style.setProperty('--p', '0%');
+    veil.classList.remove('holding');
+  }
+  function step(){
+    var p = Math.min(1, (Date.now() - t0) / DUR);
+    if(bar) bar.style.setProperty('--p', (p * 100).toFixed(1) + '%');
+    if(p >= 1){ open(); return; }
+    raf = requestAnimationFrame(step);
+  }
+  function start(ev){
+    if(ev && ev.preventDefault) ev.preventDefault();
+    t0 = Date.now();
+    veil.classList.add('holding');
+    raf = requestAnimationFrame(step);
+  }
+  function open(){
+    reset();
+    veil.classList.add('gone');
+    paper.classList.add('ink-open');
+    try{ sfx('relic'); }catch(e){}
+    setTimeout(function(){ veil.style.display = 'none'; }, 520);
+  }
+  veil.addEventListener('pointerdown', start);
+  veil.addEventListener('pointerup', reset);
+  veil.addEventListener('pointerleave', reset);
+  veil.addEventListener('pointercancel', reset);
+  // 已经解开过的这一天，重新进来就直接是开的
+  try{
+    if(sessionStorage.getItem('saku_ink_' + DIARY_SEL) === '1'){
+      veil.style.display = 'none';
+      paper.classList.add('ink-open');
+    }
+  }catch(e){}
+  var _open = open;
+  open = function(){
+    try{ sessionStorage.setItem('saku_ink_' + DIARY_SEL, '1'); }catch(e){}
+    _open();
   };
 }
 
@@ -2712,6 +3109,7 @@ function devPick(cfg){
 function devBuild(n){
   DEV.n = n; DEV.sel = null; DEV.days = [];
   DEV.seed = Date.now() % 100000000;      // 每次推演全新种子
+  setSandbox(true);                        // 从这里开始，一切都只活在内存里
   if(!RAW || !RAW.scenes) return;
   var today = new Date();
   for(var i = n - 1; i >= 0; i--){
@@ -2838,7 +3236,7 @@ function devRender(){
   if(r7) r7.onclick = function(){ sfx('click'); devBuild(7); };
   if(r30) r30.onclick = function(){ sfx('click'); devBuild(30); };
   if(dl) dl.onclick = function(){ DEV.showLayer = !DEV.showLayer; sfx('click'); devRender(); };
-  if(dc) dc.onclick = function(){ sfx('closeapp'); DEV.days = []; DEV.seed = 0; closeView(); };
+  if(dc) dc.onclick = function(){ sfx('closeapp'); DEV.days = []; DEV.seed = 0; setSandbox(false); closeView(); };
   var r100 = $('devR100');
   if(r100) r100.onclick = function(){ sfx('click'); devBuild(100); };
   document.querySelectorAll('[data-dev]').forEach(function(f){
