@@ -763,6 +763,7 @@ ul.xlist .xr-rebuild{background:linear-gradient(90deg,rgba(160,110,210,.10),tran
 
 <script src="saku-data.enc.js"></script>
 <script src="saku-ascii.enc.js"></script>
+<script src="saku-engine.enc.js"></script>
 <script src="maze.enc.js"></script>
 <script>
 /* =====================================================================
@@ -1879,9 +1880,13 @@ async function boot(serverMode){
         }, 60000);
       }
     }catch(e){
-      $('err').textContent = '密码不对，或者数据已损坏';
+      var msg = (e && e.message) ? e.message : String(e);
+      // 解密本身失败（AEAD 校验不过）才是密码错；其它错照实说
+      var isPw = /decrypt|OperationError|DataError|tag|unable to authenticate/i.test(msg);
+      $('err').textContent = isPw ? '密码不对，或者数据已损坏' : ('出错了：' + msg);
       $('go').textContent = '进入';
-      try{ localStorage.removeItem(STORE_KEY); }catch(e2){}
+      if(isPw){ try{ localStorage.removeItem(STORE_KEY); }catch(e2){} }
+      if(window.console) console.error('[saku] 打开失败', e);
     }
   }
   $('go').addEventListener('click', function(){ tryOpen($('pw').value, true); });
