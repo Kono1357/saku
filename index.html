@@ -294,6 +294,21 @@ ul.items li.night .x{color:#b9c5d8}
 .cal-legend span{white-space:nowrap}
 .cal-tip{text-align:center;color:#4e596b;font-size:12px;padding:14px 0 4px;letter-spacing:.5px}
 
+/* 未来日期提示 */
+function showFutureToast(key){
+  var el = document.getElementById('ftoast');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'ftoast'; el.className = 'ftoast';
+    document.body.appendChild(el);
+  }
+  var d = parseInt(key.slice(8,10),10), m = parseInt(key.slice(5,7),10);
+  el.innerHTML = '<b>时间尚未抵达</b><span>' + m + ' 月 ' + d + ' 日还没有发生</span>';
+  el.classList.add('on');
+  clearTimeout(el._t);
+  el._t = setTimeout(function(){ el.classList.remove('on'); }, 2200);
+}
+
 /* ---------- 底部抽屉 ---------- */
 .sheet{position:fixed;inset:0;z-index:180;pointer-events:none}
 .sheet.on{pointer-events:auto}
@@ -810,6 +825,79 @@ ul.xlist .xr-rebuild{background:linear-gradient(90deg,rgba(160,110,210,.10),tran
   font-family:"Songti SC","STSong",Georgia,serif;
 }
 .dem-sub{font-size:12px; color:var(--dim2); letter-spacing:1px}
+
+
+/* ---------- 未来日期 ---------- */
+.dcell.future{background:rgba(255,255,255,.012);color:#3b4453;cursor:pointer}
+.dcell.future .dnum{opacity:.55}
+.dcell.future .dqm{font-size:9px;color:#39414f;line-height:1}
+.dcell.future:active{background:rgba(255,255,255,.05)}
+.ftoast{
+  position:fixed;left:50%;bottom:calc(var(--safe-bot) + 90px);transform:translate(-50%,14px);
+  z-index:340;padding:13px 22px;border-radius:14px;text-align:center;
+  background:rgba(20,24,32,.96);border:1px solid rgba(159,176,200,.3);
+  box-shadow:0 12px 36px rgba(0,0,0,.55);opacity:0;pointer-events:none;
+  transition:opacity .24s, transform .24s;
+}
+.ftoast.on{opacity:1;transform:translate(-50%,0)}
+.ftoast b{display:block;font-size:14.5px;color:#cfd8e6;letter-spacing:2px;margin-bottom:3px}
+.ftoast span{font-size:12px;color:#5f6b80;letter-spacing:.5px}
+
+/* ---------- 观测者档案 ---------- */
+.obs{
+  position:relative;border-radius:16px;padding:20px 18px 18px;margin-bottom:14px;
+  background:
+    radial-gradient(rgba(120,100,70,.04) 1px, transparent 1px),
+    linear-gradient(180deg,#e9dfc8,#ddd0b4);
+  background-size:3px 3px, 100% 100%;
+  border:1px solid rgba(91,70,50,.35);
+  box-shadow:0 10px 30px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.5);
+  color:#2b2117;font-family:"Songti SC","STSong",Georgia,serif;
+}
+.obs-band{
+  position:absolute;left:0;right:0;top:0;height:5px;border-radius:16px 16px 0 0;
+  background:linear-gradient(90deg,#2f3a4d,#4a5570 40%,#2f3a4d);
+}
+.obs-head{margin-bottom:16px;padding-top:4px}
+.obs-id{font-size:19px;letter-spacing:4px;color:#2b2117;font-weight:600}
+.obs-sub{font-size:10.5px;letter-spacing:2px;color:#8b7355;margin-top:3px;
+  font-family:ui-monospace,Menlo,monospace}
+.obs-seal{
+  position:absolute;right:16px;top:18px;font-size:9.5px;letter-spacing:1px;
+  font-family:ui-monospace,Menlo,monospace;color:#8a6d16;
+  border:1px solid rgba(168,128,31,.5);border-radius:5px;padding:3px 7px;
+  transform:rotate(6deg);opacity:.85;
+}
+.obs-live{
+  border:1px dashed rgba(91,70,50,.35);border-radius:11px;padding:13px 14px;
+  background:rgba(255,255,255,.42);margin-bottom:16px;text-align:center;
+}
+.obs-live .ol-l{font-size:11px;letter-spacing:2px;color:#8b7355;margin-bottom:5px}
+.obs-live .ol-v{font-size:24px;letter-spacing:2px;color:#2b2117;font-weight:600;line-height:1.3}
+.obs-live .ol-a{font-size:12.5px;color:#6b5940;margin-top:4px}
+.obs-live .ol-m{font-size:12px;color:#8a6d16;margin-top:8px;letter-spacing:1px}
+.obs-row{display:flex;justify-content:space-between;font-size:13px;padding:6px 2px;
+  border-bottom:1px dotted rgba(91,70,50,.22)}
+.obs-row:last-of-type{border-bottom:none}
+.obs-row span{color:#8b7355}
+.obs-row b{color:#2b2117;font-weight:600}
+.obs-note{margin-top:14px;font-size:12.5px;line-height:2;color:#6b5940;
+  border-left:3px solid rgba(168,57,44,.4);padding-left:11px}
+.obs-lock{margin-top:16px;text-align:center;font-size:12.5px}
+.obs-lock a{color:#2f5d7c;cursor:pointer;text-decoration:underline;
+  text-underline-offset:3px;text-decoration-color:rgba(47,93,124,.4)}
+
+/* ---------- 沙盒警告 ---------- */
+.dev-warn{
+  display:flex;gap:11px;align-items:flex-start;padding:12px 14px;border-radius:13px;
+  background:linear-gradient(180deg,rgba(168,57,44,.18),rgba(168,57,44,.06));
+  border:1px solid rgba(168,57,44,.5);margin-bottom:14px;
+  animation:warnPulse 2.6s ease-in-out infinite;
+}
+@keyframes warnPulse{0%,100%{box-shadow:0 0 0 0 rgba(168,57,44,0)}50%{box-shadow:0 0 0 4px rgba(168,57,44,.13)}}
+.dev-warn .dw-i{font-size:16px;line-height:1.4}
+.dev-warn span{font-size:12.5px;line-height:1.75;color:#f0c8c4}
+.dev-warn b{color:#ff9b90;letter-spacing:.5px}
 
 /* ---------- 开发者模式 ---------- */
 .dev-stat{display:flex; gap:14px; flex-wrap:wrap; margin:10px 0 4px}
@@ -1594,12 +1682,28 @@ function renderCalendar(){
   $('calPrev').onclick = function(){ sfx('click'); CAL_M--; if(CAL_M < 0){ CAL_M = 11; CAL_Y--; } renderCalendar(); };
   $('calNext').onclick = function(){ sfx('click'); CAL_M++; if(CAL_M > 11){ CAL_M = 0; CAL_Y++; } renderCalendar(); };
 
+  var now0 = new Date(Date.now() + clockSkew);
+  var todayNum = new Date(now0.getFullYear(), now0.getMonth(), now0.getDate()).getTime();
+
   var grid = $('calGrid');
   Array.prototype.forEach.call(grid.children, function(el){
     if(el.classList.contains('empty')) return;
     var k = el.dataset.day;
+    var dTs = new Date(k + 'T00:00:00').getTime();
+    var future = dTs > todayNum;
+    if(future){
+      el.classList.add('future');
+      el.innerHTML = '<span class="dnum">' + parseInt(k.slice(8,10),10) + '</span>'
+        + '<span class="dqm">?</span>';
+    }
     el.addEventListener('click', function(ev){
       ev.preventDefault();
+      if(future){
+        // 未来绝对不可观测
+        try{ sfx('bad'); }catch(e){}
+        showFutureToast(k);
+        return;
+      }
       CAL_SEL = k;
       try{ sfx('click'); }catch(e){}
       Array.prototype.forEach.call(grid.children, function(x){ x.classList.remove('sel'); });
@@ -1954,7 +2058,7 @@ const RULES = `
 `;
 
 /* ---------- 关于 ---------- */
-function renderAbout(){
+function renderAboutOld(){
   var P = placeAt(new Date(Date.now() + clockSkew));
   var born = DATA && DATA.bornAt ? DATA.bornAt : '—';
   var total = DATA && DATA.total ? DATA.total : 0;
@@ -1991,6 +2095,62 @@ function renderAbout(){
   var d7 = $('dev7'), d30 = $('dev30');
   if(d7) d7.onclick = function(){ sfx('openapp'); showView('dev'); devBuild(7); };
   if(d30) d30.onclick = function(){ sfx('openapp'); showView('dev'); devBuild(30); };
+}
+
+/* ---------- 观测者档案 ---------- */
+function renderAbout(){
+  var P = placeAt(new Date(Date.now() + clockSkew));
+  var born = (DATA && DATA.bornAt) ? DATA.bornAt : '——';
+  var emo = null;
+  try{ emo = (DATA && DATA.emoByDay) ? DATA.emoByDay[keyToday()] : null; }catch(e){}
+  var lv = emo ? emo.level : 'calm';
+  var moon = MOON[lv] || MOON.calm;
+  $('viewBody').innerHTML = `
+  <div class="obs">
+    <div class="obs-band"></div>
+    <div class="obs-head">
+      <div class="obs-id">观测者档案</div>
+      <div class="obs-sub">OBSERVER FILE · 朔</div>
+    </div>
+    <div class="obs-seal">AES-256</div>
+
+    <div class="obs-live">
+      <div class="ol-l">此刻她在</div>
+      <div class="ol-v">${P ? P.cn : '——'}</div>
+      <div class="ol-a">${P ? (ACT_CN[P.act] || '') : ''}</div>
+      <div class="ol-m">${moon.g} ${moon.cn}${emo ? '　' + (emo.v > 0 ? '+' : '') + emo.v : ''}</div>
+    </div>
+
+    <div class="obs-row"><span>世界起点</span><b>${born}</b></div>
+    <div class="obs-row"><span>时间流速</span><b>与现实 1 : 1</b></div>
+    <div class="obs-row"><span>未来</span><b>不可观测</b></div>
+    <div class="obs-row"><span>观测权限</span><b>只读</b></div>
+
+    <div class="obs-note">
+      你只是一个偶尔来看一眼的人。<br>
+      不能干预，不能留言，不能改变任何事。
+    </div>
+
+    <div class="obs-lock"><a id="lockLink">清除本机记住的密码</a></div>
+  </div>
+  <div class="card"><h3>沙盒</h3>
+    <p style="color:var(--dim);font-size:13.5px">平行宇宙推演。数据只在内存里，不会写进任何存档，关掉就销毁。</p>
+    <div class="dev-btns">
+      <button class="dev-btn" id="dev7">推演 7 天</button>
+      <button class="dev-btn" id="dev30">推演 30 天</button>
+      <button class="dev-btn" id="dev100">推演 100 天</button>
+    </div>
+  </div>`;
+  var lk = $('lockLink');
+  if(lk) lk.onclick = function(){ try{ localStorage.removeItem(STORE_KEY); }catch(e){} location.reload(); };
+  var d7 = $('dev7'), d30 = $('dev30'), d100 = $('dev100');
+  if(d7) d7.onclick = function(){ sfx('openapp'); showView('dev'); devBuild(7); };
+  if(d30) d30.onclick = function(){ sfx('openapp'); showView('dev'); devBuild(30); };
+  if(d100) d100.onclick = function(){ sfx('openapp'); showView('dev'); devBuild(100); };
+}
+function keyToday(){
+  var d = new Date(Date.now() + clockSkew);
+  return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
 }
 
 /* ---------- 桌游 ---------- */
@@ -2043,6 +2203,7 @@ function devPick(cfg){
 
 function devBuild(n){
   DEV.n = n; DEV.sel = null; DEV.days = [];
+  DEV.seed = Date.now() % 100000000;      // 每次推演全新种子
   if(!RAW || !RAW.scenes) return;
   var today = new Date();
   for(var i = n - 1; i >= 0; i--){
@@ -2132,10 +2293,11 @@ function devRender(){
       + '<span><b>' + dupRate + '%</b> 重复率</span>'
     + '</div>'
     + '<div class="dev-btns">'
-      + '<button class="dev-btn" id="devR7">重roll 7 天</button>'
-      + '<button class="dev-btn" id="devR30">重roll 30 天</button>'
+      + '<button class="dev-btn" id="devR7">重新推演 7 天</button>'
+      + '<button class="dev-btn" id="devR30">重新推演 30 天</button>'
+      + '<button class="dev-btn" id="devR100">重新推演 100 天</button>'
       + '<button class="dev-btn" id="devLayer">来源标注 ' + (DEV.showLayer ? '开' : '关') + '</button>'
-      + '<button class="dev-btn dan" id="devClose">销毁沙盒</button>'
+      + '<button class="dev-btn dan" id="devClose">销毁当前推演</button>'
     + '</div></div>';
 
   DEV.days.forEach(function(d, di){
@@ -2168,7 +2330,9 @@ function devRender(){
   if(r7) r7.onclick = function(){ sfx('click'); devBuild(7); };
   if(r30) r30.onclick = function(){ sfx('click'); devBuild(30); };
   if(dl) dl.onclick = function(){ DEV.showLayer = !DEV.showLayer; sfx('click'); devRender(); };
-  if(dc) dc.onclick = function(){ sfx('closeapp'); DEV.days = []; closeView(); };
+  if(dc) dc.onclick = function(){ sfx('closeapp'); DEV.days = []; DEV.seed = 0; closeView(); };
+  var r100 = $('devR100');
+  if(r100) r100.onclick = function(){ sfx('click'); devBuild(100); };
   document.querySelectorAll('[data-dev]').forEach(function(f){
     var h = f.querySelector('.fold-h');
     h.onclick = function(){ f.classList.toggle('open'); sfx('click'); };
