@@ -2859,6 +2859,18 @@ function renderDrop(){
         <div class="cm-deploy" id="cmDeploy">—</div>
       </div>
 
+      <div class="cm-sec">
+        <div class="cm-t">③ 整站备份</div>
+        <div class="btns">
+          <button class="dev-btn" id="cmBackup">下载源码备份（加密）</button>
+        </div>
+        <div class="cm-note">
+          换手机、容器重装、手滑删了目录 —— 都靠这个包救回来。<br>
+          里面是全部源码和内容，<b>已加密</b>；在新机器上跑 <code>python3 restore.py --yes</code> 就能还原。<br>
+          <span style="color:#6f7887">建议存到网盘或者电脑上，别只留一份。</span>
+        </div>
+      </div>
+
       <div class="cm-sec" style="text-align:right">
         <button class="dev-btn" id="cmLockAgain">锁定</button>
       </div>
@@ -2982,6 +2994,14 @@ function bindCmActions(){
     CM.file = null; f.value = ''; cmLog('');
     $('cmSave').disabled = $('cmCheck').disabled = $('cmClear').disabled = true;
     sfx('click');
+  };
+  var bk = $('cmBackup');
+  if(bk) bk.onclick = function(){
+    sfx('click');
+    var a = document.createElement('a');
+    a.href = DROP_BASE + '/admin/backup?t=' + encodeURIComponent(CM.token);
+    a.download = 'saku-src-' + new Date().toISOString().slice(0,10) + '.zip';
+    document.body.appendChild(a); a.click(); a.remove();
   };
 }
 
