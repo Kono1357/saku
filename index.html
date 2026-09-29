@@ -1652,6 +1652,79 @@ ul.xlist .xr-rebuild{background:linear-gradient(90deg,rgba(160,110,210,.10),tran
   font-family:"Kaiti SC","STKaiti","KaiTi",serif;
 }
 .dpaper .tl-masked{ color:#8e7a5e; font-style:italic }
+/* ============================================================
+   自适应
+   之前整套样式一条 @media 都没有：所有屏幕共用一套固定尺寸，
+   手机上偏挤、电脑上被拉成一条横贯整屏的长文，都很难读。
+   这里补上：内容限宽居中 + 三档断点 + 动态视口高度。
+   ============================================================ */
+:root{
+  /* 手机浏览器地址栏会占用高度，dvv 能让布局跟着变，不会顶出去 */
+  --vh: 100dvh;
+}
+body{ height:var(--vh) }
+#home{ height:var(--vh); padding:calc(var(--safe-top) + 14px) 20px calc(var(--safe-bot) + 14px) }
+
+/* 内容区限宽 —— 桌面端居中，读起来才不累 */
+.grid, .view-body{ width:100%; max-width:560px; margin-left:auto; margin-right:auto }
+#gate > *{ max-width:340px }
+
+/* ---- 窄屏手机（iPhone SE / 小屏安卓）---- */
+@media (max-width:380px){
+  #home{ padding-left:14px; padding-right:14px }
+  .grid{ gap:14px 10px }
+  .app .nm{ font-size:11px }
+  .app .ico{ font-size:24px }
+  .card{ padding:13px; border-radius:13px }
+  .dpaper{ padding:20px 16px 18px }
+  .dpaper .dtp{ font-size:15px; line-height:2.05 }
+  .dpaper .dtitle .dt-n{ font-size:29px }
+  .dpaper .tl-time{ flex-basis:44px; width:44px; font-size:10.5px }
+  .dnote{ padding:13px 13px 14px }
+  .dnote .dn-t{ font-size:14px }
+  .inkpad{ width:206px }
+  .inkpad .p-keys button{ font-size:17px; padding:9px 0 }
+}
+
+/* ---- 平板 / 大屏手机 ---- */
+@media (min-width:600px){
+  .grid, .view-body{ max-width:620px }
+  .dpaper{ padding:32px 34px 30px }
+  .dpaper .dtp{ font-size:17px; line-height:2.25 }
+  #home{ padding-left:28px; padding-right:28px }
+}
+
+/* ---- 电脑：内容居中成一栏，别铺满整屏 ---- */
+@media (min-width:900px){
+  #home{
+    padding-top:34px; padding-bottom:34px;
+    align-items:center;
+  }
+  .grid, .view-body{ max-width:680px }
+  .grid{ justify-content:center }
+  /* 桌面端指针精确，悬停反馈给足一点 */
+  .app:hover .ico{ transform:translateY(-3px) }
+  .card:hover{ border-color:rgba(240,230,210,.20) }
+  .dpaper{ padding:38px 44px 34px }
+  .dpaper .dtp{ font-size:17.5px; line-height:2.3 }
+  .dpaper .tl-time{ flex-basis:60px; width:60px; font-size:12px }
+  /* 桌面上滚动条别太抢眼 */
+  ::-webkit-scrollbar{ width:9px }
+  ::-webkit-scrollbar-thumb{ background:rgba(240,230,210,.16); border-radius:5px }
+  ::-webkit-scrollbar-track{ background:transparent }
+}
+
+/* ---- 横屏手机：高度紧张，收一收上下留白 ---- */
+@media (max-height:480px) and (orientation:landscape){
+  #home{ padding-top:calc(var(--safe-top) + 8px); padding-bottom:calc(var(--safe-bot) + 8px) }
+  .grid{ gap:10px; }
+  .app .ico{ font-size:22px }
+}
+
+/* ---- 触屏 vs 鼠标：光标只在有鼠标时变手型 ---- */
+@media (hover:none){
+  .app{ cursor:default }
+}
 </style>
 </head>
 <body>
@@ -2931,7 +3004,7 @@ function renderDiary(){
   if(items.length){
     var trail = trajectoryOfItems(items);
     html += '<div class="draw-wrap"><button class="draw-btn" id="dnRaw">'
-      + '当天 ' + items.length + ' 条原始记录 ▾</button><div class="draw-body" id="dnRawBody">';
+      + '当天发生了什么 ▾</button><div class="draw-body" id="dnRawBody">';
 
     if(trail.length){
       html += '<div class="trail-line">她走过：'
@@ -3034,13 +3107,13 @@ function renderDiary(){
     if(!window.__DN_RAW) window.__DN_RAW = {};
     if(window.__DN_RAW[DIARY_SEL] && $('dnRawBody')){
       $('dnRawBody').classList.add('open');
-      rb.textContent = '当天 ' + items.length + ' 条原始记录 ▴';
+      rb.textContent = '当天发生了什么 ▴';
     }
     rb.onclick = function(){
       var bd = $('dnRawBody');
       var on = bd.classList.toggle('open');
       window.__DN_RAW[DIARY_SEL] = on;
-      rb.textContent = '当天 ' + items.length + ' 条原始记录 ' + (on ? '▴' : '▾');
+      rb.textContent = '当天发生了什么 ' + (on ? '▴' : '▾');
       try{ sfx('click'); }catch(e){}
     };
   }
