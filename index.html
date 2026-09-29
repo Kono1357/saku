@@ -1020,6 +1020,50 @@ ul.xlist .xr-rebuild{background:linear-gradient(90deg,rgba(160,110,210,.10),tran
 .arc-week .arc-row{border-radius:0; margin:0}
 .arc-week .arc-row + .arc-row{border-top:1px solid rgba(240,230,210,.05)}
 /* ---------- 档案（已归档的报告） ---------- */
+/* ---------- 日记：顶部的日期导航 ---------- */
+.dn-head{display:flex; align-items:center; gap:10px; padding:2px 2px 12px}
+.dn-title{font-size:19px; font-weight:600; letter-spacing:.14em; color:#e2e6ee}
+.dn-head .sp{flex:1}
+.dn-toggle{font:inherit; font-size:12.5px; padding:7px 14px; border-radius:18px; cursor:pointer;
+  background:rgba(240,230,210,.10); border:1px solid rgba(240,230,210,.24); color:#c3cbd8}
+.dn-toggle:hover{background:rgba(240,230,210,.16)}
+.dn-nav{margin-bottom:16px; border-radius:12px; overflow:hidden;
+  background:rgba(240,230,210,.05); border:1px solid rgba(240,230,210,.08)}
+.dn-m + .dn-m{border-top:1px solid rgba(240,230,210,.07)}
+.dn-mh,.dn-wh{display:flex; align-items:center; gap:9px; cursor:pointer; transition:background .16s}
+.dn-mh{padding:12px 13px; background:rgba(240,230,210,.055)}
+.dn-mh:hover{background:rgba(240,230,210,.10)}
+.dn-wh{padding:8px 11px}
+.dn-wh:hover{background:rgba(240,230,210,.06)}
+.dn-mt{font-size:14px; color:#e2e6ee; letter-spacing:.05em; font-weight:600}
+.dn-wt{font-size:12.5px; color:#aab3c2}
+.dn-c{font-size:11px; color:#6f7887}
+.dn-ar{font-size:9px; color:#8b94a3; width:10px; display:inline-block}
+.dn-mb,.dn-wb{display:none}
+.dn-m.open > .dn-mb{display:block}
+.dn-w.open > .dn-wb{display:block}
+.dn-w{margin:3px 7px; border-radius:8px; overflow:hidden; background:rgba(0,0,0,.16)}
+.dn-d{display:flex; align-items:center; gap:8px; width:100%; text-align:left;
+  font:inherit; font-size:12.5px; padding:8px 12px; cursor:pointer;
+  background:none; border:none; color:#aab3c2; transition:background .14s}
+.dn-d:hover{background:rgba(240,230,210,.07)}
+.dn-d.on{background:rgba(201,169,94,.16); color:#e8dcb4}
+.dn-moon{font-size:13px}
+.dn-dd{font-variant-numeric:tabular-nums; min-width:44px}
+.dn-wd{color:#6f7887; font-size:11.5px}
+
+/* ---------- 日记正文（第一人称） ---------- */
+.dtxt{margin:16px 0 18px}
+.dtp{margin:0 0 13px; font-size:15px; line-height:2.0; color:#e6eaf2;
+  text-indent:1.6em; font-family:"Kaiti SC","STKaiti","KaiTi","Songti SC",serif}
+.dtp-empty{color:#6f7887; font-style:italic}
+.draw-wrap{margin-top:16px; border-top:1px solid rgba(240,230,210,.10); padding-top:12px}
+.draw-btn{font:inherit; font-size:12.5px; padding:8px 14px; border-radius:8px; cursor:pointer;
+  background:rgba(240,230,210,.07); border:1px solid rgba(240,230,210,.16); color:#9aa4b2}
+.draw-btn:hover{background:rgba(240,230,210,.12)}
+.draw-body{display:none; margin-top:12px}
+.draw-body.open{display:block}
+
 /* ---------- 日记里的随笔 ---------- */
 .dnote{margin:0 0 14px; padding:14px 16px 15px; border-radius:12px;
   background:linear-gradient(180deg,rgba(240,230,210,.10),rgba(240,230,210,.05));
@@ -1220,7 +1264,6 @@ const WORLD_START = {
 };
 
 const APPS = [
-  {id:'calendar',ico:'▤', name:'档案'},
   {id:'game',    ico:'⚄', name:'桌游'},
   {id:'diary',   ico:'✎', name:'日记'},
   {id:'drop',    ico:'📥', name:'投递箱'},
@@ -1687,8 +1730,7 @@ function bindBridge(){
     var added = extraMerge(payload);
     if(added > 0){
       sfx('coin');
-      if(VIEW === 'calendar') renderArchive();
-      else if(VIEW === 'diary') renderDiary();
+      if(VIEW === 'diary') renderDiary();
     }
   });
 }
@@ -1740,7 +1782,6 @@ function showView(id, originEl){
 
   body.classList.remove('short');
   if(id === 'diary') renderDiary();
-  else if(id === 'calendar') renderArchive();
   else if(id === 'drop') renderDrop();
   else if(id === 'wall') renderWall();
   else if(id === 'dev') devRender();
@@ -1863,87 +1904,6 @@ function trajectoryOf(items){
   return null;
 }
 
-function renderCalendar(){
-  var body = $('viewBody');
-  var map;
-  try{ map = dayMap(); }catch(e){ body.innerHTML = '<div class="empty">日历暂时翻不开。</div>'; return; }
-  var now = new Date(Date.now() + clockSkew);
-  if(CAL_Y == null){ CAL_Y = now.getFullYear(); CAL_M = now.getMonth(); }
-  var first = new Date(CAL_Y, CAL_M, 1);
-  var startDow = (first.getDay() + 6) % 7;
-  var daysIn = new Date(CAL_Y, CAL_M + 1, 0).getDate();
-  var todayKey = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate());
-
-  var cells = '';
-  for(var i = 0; i < startDow; i++) cells += '<div class="dcell empty"></div>';
-  for(var d = 1; d <= daysIn; d++){
-    var key = CAL_Y + '-' + pad(CAL_M + 1) + '-' + pad(d);
-    var rec = map[key];
-    var hol = holidayOf(key);
-    var cls = 'dcell';
-    if(rec) cls += ' has';
-    if(hol) cls += ' holiday';
-    if(key === todayKey) cls += ' today';
-    if(key === CAL_SEL) cls += ' sel';
-    var moon = moonFor(key);
-    var hasPriv = rec && rec.items.some(function(it){ return kindOf(it.text) === 'secret'; });
-    cells += '<div class="' + cls + '" data-day="' + key + '">'
-      + (hasPriv ? '<span class="dlock">🔒</span>' : '')
-      + '<span class="dnum">' + d + '</span>'
-      + '<span class="dmoon2">' + moon.g + '</span>'
-      + (rec && rec.extra && rec.extra.length ? '<span class="dgame">⚄</span>' : '')
-      + '</div>';
-  }
-
-  body.innerHTML =
-    '<div class="cal-head">'
-    + '<div class="ym">' + CAL_Y + ' 年 ' + (CAL_M + 1) + ' 月</div>'
-    + '<div class="sp"></div>'
-    + '<button class="cal-nav" id="calPrev">‹</button>'
-    + '<button class="cal-nav" id="calNext">›</button>'
-    + '</div>'
-    + '<div class="cal-week"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>'
-    + '<div class="cal-grid" id="calGrid">' + cells + '</div>'
-    + '<div class="cal-legend">'
-      + '<span>🌕 圆月</span><span>🌓 细月</span><span>🌘 暗月</span>'
-      + '<span>🌑 裂月</span><span>🌒 血月</span><span>🔒 有私密</span><span>⚄ 桌游</span>'
-    + '</div>'
-    + '<div class="cal-tip">点任意日期，看那天她走过了哪里</div>'
-    ;
-
-  $('calPrev').onclick = function(){ sfx('click'); CAL_M--; if(CAL_M < 0){ CAL_M = 11; CAL_Y--; } renderCalendar(); };
-  $('calNext').onclick = function(){ sfx('click'); CAL_M++; if(CAL_M > 11){ CAL_M = 0; CAL_Y++; } renderCalendar(); };
-
-  var now0 = new Date(Date.now() + clockSkew);
-  var todayNum = new Date(now0.getFullYear(), now0.getMonth(), now0.getDate()).getTime();
-
-  var grid = $('calGrid');
-  Array.prototype.forEach.call(grid.children, function(el){
-    if(el.classList.contains('empty')) return;
-    var k = el.dataset.day;
-    var dTs = new Date(k + 'T00:00:00').getTime();
-    var future = dTs > todayNum;
-    if(future){
-      el.classList.add('future');
-      el.innerHTML = '<span class="dnum">' + parseInt(k.slice(8,10),10) + '</span>'
-        + '<span class="dqm">?</span>';
-    }
-    el.addEventListener('click', function(ev){
-      ev.preventDefault();
-      if(future){
-        // 未来绝对不可观测
-        try{ sfx('bad'); }catch(e){}
-        showFutureToast(k);
-        return;
-      }
-      CAL_SEL = k;
-      try{ sfx('click'); }catch(e){}
-      Array.prototype.forEach.call(grid.children, function(x){ x.classList.remove('sel'); });
-      el.classList.add('sel');
-      openDaySheet(k, map[k]);
-    });
-  });
-}
 
 /* ---------- 底部抽屉 ---------- */
 function sheetEl(){
@@ -2176,148 +2136,7 @@ function archiveOfDay(day){
            first: items.length ? items[0].time : '--:--',
            last: items.length ? items[items.length-1].time : '--:--' };
 }
-function renderArchive(){
-  var body = $('viewBody');
-  var days = [];
-  try{ if(DATA && DATA.days && DATA.days.length) days = DATA.days.slice(); }catch(e){}
-  if(!days.length){ body.innerHTML = emptyDiary(); return; }
 
-  var now = new Date(Date.now() + clockSkew);
-  var todayKey = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate());
-  var past = days.filter(function(d){ return d.date <= todayKey; });
-  past.sort(function(a,b){ return a.date < b.date ? 1 : -1; });     // 新的在上
-  if(!past.length){ body.innerHTML = emptyDiary(); return; }
-
-  /* 按 月 → 周 归档。ISO 周（周一起算）。 */
-  function weekOf(dateStr){
-    var dt = new Date(dateStr + 'T00:00:00');
-    var t = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
-    t.setDate(t.getDate() - ((t.getDay() + 6) % 7));               // 回到本周一
-    return t;
-  }
-  function weekKey(dateStr){
-    var mon = weekOf(dateStr);
-    return mon.getFullYear() + '-' + pad(mon.getMonth()+1) + '-' + pad(mon.getDate());
-  }
-  function weekLabel(dateStr){
-    var mon = weekOf(dateStr);
-    var sun = new Date(mon.getTime()); sun.setDate(sun.getDate() + 6);
-    return (mon.getMonth()+1) + '/' + mon.getDate() + ' – ' + (sun.getMonth()+1) + '/' + sun.getDate();
-  }
-
-  var months = [];           // [{ym, label, days:[], weeks:[{key,label,days:[]}]}]
-  var byMonth = {};
-  past.forEach(function(day){
-    var ym = day.date.slice(0, 7);
-    if(!byMonth[ym]){ byMonth[ym] = { ym: ym, days: [], weeks: [], wkIdx: {} }; months.push(byMonth[ym]); }
-    var M = byMonth[ym];
-    M.days.push(day);
-    var wk = weekKey(day.date);
-    if(!M.wkIdx[wk]){ M.wkIdx[wk] = { key: wk, label: weekLabel(day.date), days: [] }; M.weeks.push(M.wkIdx[wk]); }
-    M.wkIdx[wk].days.push(day);
-  });
-
-  function rowHTML(day){
-    var a = archiveOfDay(day);
-    var moon = moonFor(day.date);
-    var hol = holidayOf(day.date);
-    var weather = guessWeather(day);
-    var wd = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'][new Date(day.date+'T00:00:00').getDay()];
-    var meta = [];
-    if(a.n) meta.push(a.n + ' 条');
-    meta.push(a.first + '–' + a.last);
-    if(weather) meta.push(weather);
-    if(a.extra.length) meta.push('桌游 ' + a.extra.length + ' 局');
-    var line = dayReportLine(day);
-    return '<div class="arc-row" data-d="' + day.date + '">'
-      + '<div class="arc-d">'
-        + '<span class="arc-date">' + day.date.slice(5).replace('-', ' / ') + '</span>'
-        + '<span class="arc-wd">' + wd + (hol ? ' · ' + hol : '') + '</span>'
-      + '</div>'
-      + '<div class="arc-m"><span class="arc-moon">' + moon.g + '</span>'
-        + '<span class="arc-mooncn">' + moon.cn + '</span>'
-        + (a.hasSecret ? '<span class="arc-lock">🔒</span>' : '')
-        + (a.extra.length ? '<span class="arc-game">⚄</span>' : '')
-      + '</div>'
-      + '<div class="arc-t">' + (line ? esc(line) : '<span class="arc-empty">这天没有留下记录。</span>') + '</div>'
-      + '<div class="arc-x">' + meta.join(' · ') + '</div>'
-      + '</div>';
-  }
-
-  /* 折叠状态记在内存里，翻来翻去不会丢 */
-  if(!window.__ARC_OPEN) window.__ARC_OPEN = { months: {}, weeks: {} };
-
-  var html = '<div class="arc-head">'
-      + '<div class="arc-title">档案</div>'
-      + '<div class="arc-sub">已归档的报告 · ' + past.length + ' 天 · 按周归档</div>'
-    + '</div>';
-
-  months.forEach(function(M, mi){
-    var mm = M.ym.slice(0,4) + ' 年 ' + parseInt(M.ym.slice(5,7),10) + ' 月';
-    // 最新一个月默认展开
-    var mOpen = (window.__ARC_OPEN.months[M.ym] !== undefined)
-      ? window.__ARC_OPEN.months[M.ym] : (mi === 0);
-    html += '<div class="arc-month' + (mOpen ? ' open' : '') + '" data-ym="' + M.ym + '">'
-      + '<div class="arc-mh" data-arc-m="' + M.ym + '">'
-        + '<span class="arc-ar">' + (mOpen ? '▼' : '▶') + '</span>'
-        + '<span class="arc-mt">' + mm + '</span>'
-        + '<span class="sp"></span>'
-        + '<span class="arc-mc">' + M.days.length + ' 天 · ' + M.weeks.length + ' 周</span>'
-      + '</div>'
-      + '<div class="arc-mb">';
-    M.weeks.forEach(function(W, wi){
-      var wOpen = (window.__ARC_OPEN.weeks[W.key] !== undefined)
-        ? window.__ARC_OPEN.weeks[W.key] : (mOpen && wi === 0);
-      html += '<div class="arc-week' + (wOpen ? ' open' : '') + '" data-wk="' + W.key + '">'
-        + '<div class="arc-wh" data-arc-w="' + W.key + '">'
-          + '<span class="arc-ar">' + (wOpen ? '▼' : '▶') + '</span>'
-          + '<span class="arc-wt">' + W.label + '</span>'
-          + '<span class="sp"></span>'
-          + '<span class="arc-wc">' + W.days.length + ' 天</span>'
-        + '</div>'
-        + '<div class="arc-wb">' + W.days.map(rowHTML).join('') + '</div>'
-        + '</div>';
-    });
-    html += '</div></div>';
-  });
-
-  body.innerHTML = html;
-
-  /* 折叠交互 */
-  Array.prototype.forEach.call(body.querySelectorAll('[data-arc-m]'), function(el){
-    el.onclick = function(ev){
-      ev.stopPropagation();
-      var ym = el.dataset.arcM;
-      var box = el.parentNode;
-      var open = !box.classList.contains('open');
-      box.classList.toggle('open', open);
-      window.__ARC_OPEN.months[ym] = open;
-      el.querySelector('.arc-ar').textContent = open ? '▼' : '▶';
-      sfx('click');
-    };
-  });
-  Array.prototype.forEach.call(body.querySelectorAll('[data-arc-w]'), function(el){
-    el.onclick = function(ev){
-      ev.stopPropagation();
-      var wk = el.dataset.arcW;
-      var box = el.parentNode;
-      var open = !box.classList.contains('open');
-      box.classList.toggle('open', open);
-      window.__ARC_OPEN.weeks[wk] = open;
-      el.querySelector('.arc-ar').textContent = open ? '▼' : '▶';
-      sfx('click');
-    };
-  });
-  /* 点某一天 → 跳进日记看那天的完整记录 */
-  Array.prototype.forEach.call(body.querySelectorAll('.arc-row'), function(el){
-    el.onclick = function(ev){
-      ev.stopPropagation();
-      sfx('openapp');
-      DIARY_SEL = el.dataset.d;
-      go('diary');
-    };
-  });
-}
 
 /* 朔的随笔：从 DIARY_NOTE 池里按日期确定性取一条。
    同一天永远是同一句（刷新不会变），池子空了就整块不显示。 */
@@ -2340,93 +2159,260 @@ function noteBlockHTML(date){
     + '</div>';
 }
 
+/* ============================================================
+   日记：朔自己写下来的东西
+   正文不再是"时间戳 + 第三人称流水"，而是把当天真正发生的事
+   用第一人称串起来 —— 她做了什么、那天是什么天气、什么状态。
+   ============================================================ */
+function diaryFacts(day){
+  var items = (day && day.items) || [];
+  var txt = items.map(function(i){ return i.text || ''; }).join(' ');
+  var e = emoOf(day.date);
+  var hrs = items.map(function(i){ return parseInt(i.time.slice(0,2),10); });
+  var dt = new Date(day.date + 'T00:00:00');
+  var wd = dt.getDay();
+  var hasPlay = (day.extra && day.extra.length) ? true : false;
+  var hasPriv = items.some(function(i){ return kindOf(i.text) === 'secret'; });
+  return {
+    emo: e.level || 'calm', v: (typeof e.v === 'number') ? e.v : 0,
+    period: !!e.period,
+    school: /课|教室|老师|黑板|同桌|课本|讲台|操场|考试|卷子/.test(txt),
+    study:  /作业|卷子|复习|练习|笔记/.test(txt),
+    social: /同桌|老师|同学|食堂|人群|朋友|排队/.test(txt),
+    tired:  /困|累|撑不住|疲惫|没力气|发沉/.test(txt),
+    sick:   /感冒|嗓子|鼻子|发烧|头晕/.test(txt),
+    rain:   /雨|雪/.test(txt),
+    cold:   /冷|凉|缩|手是冰/.test(txt),
+    hot:    /热|汗|蝉|闷/.test(txt),
+    night:  hrs.some(function(h){ return h >= 22 || h < 5; }),
+    early:  hrs.some(function(h){ return h < 7; }),
+    weekend: (wd === 0 || wd === 6),
+    lonely: (e.v <= -3),
+    good:   (e.level === 'glow' || e.v >= 2),
+    low:    (e.level === 'collapse' || e.level === 'irrit' || e.v <= -5),
+    play: hasPlay, priv: hasPriv,
+    n: items.length
+  };
+}
+/* 按要素从池里取一句；同一天永远取到同一句 */
+function dtake(pool, date, salt){
+  try{
+    var arr = RAW && RAW[pool];
+    if(!arr || !arr.length) return '';
+    return arr[seedOf(date + '#' + salt) % arr.length] || '';
+  }catch(e){ return ''; }
+}
+/* 把当天的事串成第一人称的几段 */
+function diaryLines(day){
+  var f = diaryFacts(day);
+  var out = [];
+  function add(pool, salt){ var t = dtake(pool, day.date, salt); if(t) out.push(t); }
+
+  add('DIARY_WAKE', 'wake');
+  if(f.sick)        add('DIARY_SICK', 'sick');
+  else if(f.period) add('DIARY_PERIOD', 'period');
+  else if(f.tired)  add('DIARY_TIRED', 'tired');
+  if(f.rain)        add('DIARY_RAIN', 'rain');
+  else if(f.cold)   add('DIARY_COLD', 'cold');
+  else if(f.hot)    add('DIARY_HOT', 'hot');
+
+  if(f.weekend){
+    add('DIARY_WEEKEND', 'wk');
+  }else{
+    add('DIARY_COMMUTE', 'commute');
+    if(f.school) add('DIARY_SCHOOL', 'school');
+    add('DIARY_NOON', 'noon');
+  }
+  if(f.social) add('DIARY_SOCIAL', 'social');
+  if(f.study)  add('DIARY_STUDY', 'study');
+  add('DIARY_HOME', 'home');
+
+  if(f.weekend && f.social) add('DIARY_SOCIAL', 'social2');
+  if(f.lonely) add('DIARY_LONELY', 'lonely');
+  if(f.low)    add('DIARY_LOW', 'low');
+  else if(f.good) add('DIARY_GOOD', 'good');
+  if(f.night)  add('DIARY_NIGHT', 'night');
+  if(f.tired && !f.sick) add('DIARY_TIRED', 'tired2');
+
+  add('DIARY_END', 'end');
+  /* 一天别写太长：留 3-6 段，挑出来的顺序保持"早上→夜里" */
+  if(out.length > 6){
+    var keep = [out[0]];
+    var mid = out.slice(1, out.length - 1);
+    var step = Math.ceil(mid.length / 4);
+    for(var i = 0; i < mid.length && keep.length < 5; i += step) keep.push(mid[i]);
+    keep.push(out[out.length - 1]);
+    out = keep;
+  }
+  return out;
+}
+
 function renderDiary(){
   var body = $('viewBody');
-  try{
-    if(!DATA || !DATA.days || !DATA.days.length){ body.innerHTML = emptyDiary(); return; }
-    var days = DATA.days.slice().reverse();
-    if(!DIARY_SEL || !days.some(function(d){ return d.date === DIARY_SEL; })) DIARY_SEL = days[0].date;
-    var day = days.filter(function(d){ return d.date === DIARY_SEL; })[0];
-    if(!day || !day.items){ body.innerHTML = emptyDiary(); return; }
+  var days = [];
+  try{ if(DATA && DATA.days && DATA.days.length) days = DATA.days.slice(); }catch(e){}
+  if(!days.length){ body.innerHTML = emptyDiary(); return; }
 
-    var items = day.items || [];
-    var seed = seedOf(day.date);
-    var lab = fmtDay(day.date);
-    var mo = parseInt(day.date.slice(5,7),10), dd = parseInt(day.date.slice(8,10),10);
-    var e = emoOf(day.date), moon = moonFor(day.date);
-    var weather = guessWeather(day);
-    var hasSecret = items.some(function(it){ return kindOf(it.text) === 'secret'; });
+  days.sort(function(x,y){ return x.date < y.date ? 1 : -1; });     // 新的在上
+  if(!DIARY_SEL || !days.some(function(d){ return d.date === DIARY_SEL; })) DIARY_SEL = days[0].date;
+  var day = days.filter(function(d){ return d.date === DIARY_SEL; })[0];
+  if(!day){ body.innerHTML = emptyDiary(); return; }
 
-    var html = '';
-    // 日期条
-    html += '<div class="diary-bar" id="diaryBar">'
-      + days.slice(0, 30).map(function(d){
+  var items = day.items || [];
+  var seed = seedOf(day.date);
+  var lab = fmtDay(day.date);
+  var mo = parseInt(day.date.slice(5,7),10), dd = parseInt(day.date.slice(8,10),10);
+  var e = emoOf(day.date), moon = moonFor(day.date);
+  var weather = guessWeather(day);
+  var hasSecret = items.some(function(it){ return kindOf(it.text) === 'secret'; });
+  var f = diaryFacts(day);
+
+  /* ---------- 顶部：日期导航（原来"档案"那套月/周折叠，合并进来了） ---------- */
+  if(!window.__DN_OPEN) window.__DN_OPEN = { open: false, months: {}, weeks: {} };
+  function weekOf(ds){
+    var d = new Date(ds + 'T00:00:00');
+    var t = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    t.setDate(t.getDate() - ((t.getDay() + 6) % 7));
+    return t;
+  }
+  function weekLabel(ds){
+    var m = weekOf(ds), sun = new Date(m.getTime()); sun.setDate(sun.getDate() + 6);
+    return (m.getMonth()+1) + '/' + m.getDate() + ' – ' + (sun.getMonth()+1) + '/' + sun.getDate();
+  }
+  var months = [], byM = {};
+  days.forEach(function(d){
+    var ym = d.date.slice(0,7);
+    if(!byM[ym]){ byM[ym] = { ym: ym, weeks: [], wIdx: {} }; months.push(byM[ym]); }
+    var M = byM[ym], wk = weekOf(d.date).toISOString().slice(0,10);
+    if(!M.wIdx[wk]){ M.wIdx[wk] = { key: wk, label: weekLabel(d.date), days: [] }; M.weeks.push(M.wIdx[wk]); }
+    M.wIdx[wk].days.push(d);
+  });
+
+  var nav = '';
+  if(window.__DN_OPEN.open){
+    nav = '<div class="dn-nav">';
+    months.forEach(function(M, mi){
+      var mOpen = (window.__DN_OPEN.months[M.ym] !== undefined) ? window.__DN_OPEN.months[M.ym] : (mi === 0);
+      nav += '<div class="dn-m' + (mOpen ? ' open' : '') + '">'
+        + '<div class="dn-mh" data-nav-m="' + M.ym + '"><span class="dn-ar">' + (mOpen ? '▼' : '▶') + '</span>'
+        + '<span class="dn-mt">' + M.ym.slice(0,4) + ' 年 ' + parseInt(M.ym.slice(5,7),10) + ' 月</span>'
+        + '<span class="sp"></span><span class="dn-c">' + M.weeks.length + ' 周</span></div><div class="dn-mb">';
+      M.weeks.forEach(function(W, wi){
+        var wOpen = (window.__DN_OPEN.weeks[W.key] !== undefined) ? window.__DN_OPEN.weeks[W.key] : (mOpen && wi === 0);
+        nav += '<div class="dn-w' + (wOpen ? ' open' : '') + '">'
+          + '<div class="dn-wh" data-nav-w="' + W.key + '"><span class="dn-ar">' + (wOpen ? '▼' : '▶') + '</span>'
+          + '<span class="dn-wt">' + W.label + '</span><span class="sp"></span>'
+          + '<span class="dn-c">' + W.days.length + ' 天</span></div><div class="dn-wb">';
+        W.days.forEach(function(d){
           var m2 = moonFor(d.date);
-          return '<button class="dchip' + (d.date === DIARY_SEL ? ' on' : '') + '" data-d="' + d.date + '">'
-            + '<span class="dc-m">' + m2.g + '</span>'
-            + parseInt(d.date.slice(5,7),10) + '/' + parseInt(d.date.slice(8,10),10) + '</button>';
-        }).join('') + '</div>';
-
-    html += noteBlockHTML(day.date);        // 她自己的随笔
-
-    if(!items.length){
-      html += '<div class="dpaper dpaper-empty">' + emptyDiary() + '</div>';
-      body.innerHTML = html;
-      bindDiaryBar();
-      return;
-    }
-
-    var first = items[0].time, last = items[items.length-1].time;
-    var slots = {};
-    items.forEach(function(it){
-      var k = slotOf(parseInt(it.time.slice(0,2),10));
-      (slots[k] = slots[k] || []).push(it);
+          var wd = ['日','一','二','三','四','五','六'][new Date(d.date+'T00:00:00').getDay()];
+          nav += '<button class="dn-d' + (d.date === DIARY_SEL ? ' on' : '') + '" data-d="' + d.date + '">'
+              + '<span class="dn-moon">' + m2.g + '</span>'
+              + '<span class="dn-dd">' + parseInt(d.date.slice(5,7),10) + '/' + parseInt(d.date.slice(8,10),10) + '</span>'
+              + '<span class="dn-wd">周' + wd + '</span></button>';
+        });
+        nav += '</div></div>';
+      });
+      nav += '</div></div>';
     });
-    var picked = ['early','am','noon','pm','eve','night','late']
-      .filter(function(k){ return slots[k] && slots[k].length; })
-      .map(function(k){ return slots[k][seedOf(day.date, k) % slots[k].length]; });
+    nav += '</div>';
+  }
 
-    html += '<div class="dpaper">'
-      + '<div class="dmeta">'
-        + '<span class="dm-w">' + day.weekday + (lab.tag ? ' · ' + lab.tag : '') + '</span>'
-        + '<span class="dm-wx">' + weather + '</span>'
-        + '<span class="dm-moon">' + moon.g + '<i>' + moon.cn + '</i>'
-          + (hasSecret ? '<em class="dm-lock">🔒</em>' : '') + '</span>'
-      + '</div>'
-      + '<div class="dtitle"><span class="dt-n">' + mo + '</span><span class="dt-u">月</span>'
-        + '<span class="dt-n">' + dd + '</span><span class="dt-u">日</span></div>'
-      + '<div class="dsum">' + pick(OPENERS, seed).replace('{n}', items.length)
-          .replace('{a}', first).replace('{b}', last) + '</div>'
-      + '<div class="dsep"></div>';
+  var html = '<div class="dn-head">'
+    + '<span class="dn-title">日记</span>'
+    + '<span class="sp"></span>'
+    + '<button class="dn-toggle" id="dnToggle">' + (window.__DN_OPEN.open ? '收起日期' : '选日期') + '</button>'
+    + '</div>' + nav;
 
-    picked.forEach(function(it, i){
+  var lines = diaryLines(day);
+
+  html += '<div class="dpaper">'
+    + '<div class="dmeta">'
+      + '<span class="dm-w">' + day.weekday + (lab.tag ? ' · ' + lab.tag : '') + '</span>'
+      + '<span class="dm-wx">' + weather + '</span>'
+      + '<span class="dm-moon">' + moon.g + '<i>' + moon.cn + '</i>'
+        + (hasSecret ? '<em class="dm-lock">🔒</em>' : '') + '</span>'
+    + '</div>'
+    + '<div class="dtitle"><span class="dt-n">' + mo + '</span><span class="dt-u">月</span>'
+      + '<span class="dt-n">' + dd + '</span><span class="dt-u">日</span></div>';
+
+  if(lines.length){
+    html += '<div class="dtxt">';
+    lines.forEach(function(t){ html += '<p class="dtp">' + esc(t) + '</p>'; });
+    html += '</div>';
+  }else if(!items.length){
+    html += '<div class="dtxt"><p class="dtp dtp-empty">这一天什么也没记下。</p></div>';
+  }
+
+  /* 她的随笔 */
+  html += noteBlockHTML(day.date);
+
+  /* 原始记录：默认收起，想看细节时再展开 */
+  if(items.length){
+    html += '<div class="draw-wrap"><button class="draw-btn" id="dnRaw">'
+      + '当天的 ' + items.length + ' 条原始记录 ▾</button><div class="draw-body" id="dnRawBody">';
+    items.forEach(function(it){
       var h = parseInt(it.time.slice(0,2),10);
       var kind = kindOf(it.text);
       html += '<div class="dpara' + ((h < 6 || h >= 22) ? ' dnight' : '')
         + (kind !== 'normal' ? ' d-' + kind : '') + '">'
         + '<span class="dp-t">' + it.time + '</span>'
-        + '<span class="dp-x">' + it.text + '</span></div>';
+        + '<span class="dp-x">' + esc(it.text) + '</span></div>';
     });
-
-    html += '<div class="dsep dthin"></div>'
-      + '<div class="dsign">' + pick(MOODS, seedOf(day.date, 'mood')) + '</div>'
-      + '</div>';
-
-    if(items.length > picked.length){
-      html += '<div class="center" style="padding:14px 0">这一天还有 ' + (items.length - picked.length)
-            + ' 条，去「档案」翻完整记录。</div>';
-    }
-    html += extraBlock(extraByDate(DIARY_SEL));
-
-    body.innerHTML = html;
-    bindDiaryBar();
-  }catch(err){
-    if(window.console) console.error('[saku] 日记渲染失败', err);
-    body.innerHTML = '<div class="dpaper dpaper-empty"><div class="dempty">'
-      + '<div class="dem-say">日记本受潮了，暂时无法翻开。</div>'
-      + '<div class="dem-sub">换一天看看，或者刷新一次</div></div></div>';
+    html += '</div></div>';
   }
+  html += '</div>';
+
+  html += extraBlock(extraByDate(DIARY_SEL));
+  body.innerHTML = html;
+
+  /* ---- 交互 ---- */
+  var tg = $('dnToggle');
+  if(tg) tg.onclick = function(){
+    window.__DN_OPEN.open = !window.__DN_OPEN.open;
+    try{ sfx('click'); }catch(e){}
+    renderDiary();
+  };
+  Array.prototype.forEach.call(body.querySelectorAll('[data-nav-m]'), function(el){
+    el.onclick = function(ev){
+      ev.stopPropagation();
+      var ym = el.dataset.navM, box = el.parentNode;
+      var on = !box.classList.contains('open');
+      box.classList.toggle('open', on);
+      window.__DN_OPEN.months[ym] = on;
+      el.querySelector('.dn-ar').textContent = on ? '▼' : '▶';
+      try{ sfx('click'); }catch(e){}
+    };
+  });
+  Array.prototype.forEach.call(body.querySelectorAll('[data-nav-w]'), function(el){
+    el.onclick = function(ev){
+      ev.stopPropagation();
+      var wk = el.dataset.navW, box = el.parentNode;
+      var on = !box.classList.contains('open');
+      box.classList.toggle('open', on);
+      window.__DN_OPEN.weeks[wk] = on;
+      el.querySelector('.dn-ar').textContent = on ? '▼' : '▶';
+      try{ sfx('click'); }catch(e){}
+    };
+  });
+  Array.prototype.forEach.call(body.querySelectorAll('.dn-d'), function(el){
+    el.onclick = function(ev){
+      ev.stopPropagation();
+      DIARY_SEL = el.dataset.d;
+      try{ sfx('click'); }catch(e){}
+      $('viewBody').scrollTop = 0;
+      renderDiary();
+    };
+  });
+  var rb = $('dnRaw');
+  if(rb) rb.onclick = function(){
+    var bd = $('dnRawBody');
+    var on = bd.classList.toggle('open');
+    rb.textContent = '当天的 ' + items.length + ' 条原始记录 ' + (on ? '▴' : '▾');
+    try{ sfx('click'); }catch(e){}
+  };
 }
+
 function bindDiaryBar(){
   var bar = $('diaryBar');
   if(!bar) return;
@@ -3262,8 +3248,7 @@ async function boot(serverMode){
           var g2 = Saku.feed(WORLD_START, new Date(), RAW);
           DATA.days = g2.days; DATA.total = g2.total;
           if(VIEW === 'now' || VIEW === 'archive'){
-            if(VIEW === 'calendar') renderArchive();
-            else if(VIEW === 'diary') renderDiary();
+            if(VIEW === 'diary') renderDiary();
           }
         }catch(e){}
       }, 60000);
@@ -3309,8 +3294,7 @@ async function boot(serverMode){
             var g2 = Saku.feed(WORLD_START, new Date(), RAW);
             DATA.days = g2.days; DATA.total = g2.total;
             DATA.emoByDay = (Saku.emoByDay ? Saku.emoByDay() : {}) || {};
-            if(VIEW === 'calendar') renderCalendar();
-            else if(VIEW === 'diary') renderDiary();
+            if(VIEW === 'diary') renderDiary();
           }catch(e){}
         }, 60000);
       }
