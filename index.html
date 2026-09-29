@@ -1538,6 +1538,70 @@ ul.xlist .xr-rebuild{background:linear-gradient(90deg,rgba(160,110,210,.10),tran
 .dpaper[data-mood="collapse"] .dtp:nth-child(3n){ margin-left:-10px; transform:rotate(.4deg) }
 .dpaper.ink-open .dtp{ transform:skewX(-1.1deg) }
 .dpaper.ink-open .dtp:nth-child(2n){ transform:skewX(.9deg) }
+/* ============================================================
+   归档轨迹：一条竖线串起她那天待过的地方
+   ============================================================ */
+.dpaper .trail-line{
+  margin-bottom:16px; padding:11px 13px; border-radius:9px; line-height:1.9;
+  background:rgba(120,95,60,.085); border-left:3px solid rgba(120,95,60,.32);
+  font-size:13px; color:#5a4a33;
+  font-family:-apple-system,"PingFang SC",sans-serif;
+}
+.dpaper .trail-line b{ color:#3f3018; font-weight:600 }
+.dpaper .trail-line i{ font-style:normal; color:#a08e72; margin:0 7px }
+
+.dpaper .tl{ padding-left:0 }
+.dpaper .tl-node{ display:flex; gap:13px; align-items:stretch }
+.dpaper .tl-rail{ position:relative; width:16px; flex:0 0 16px; display:flex; flex-direction:column; align-items:center }
+.dpaper .tl-pin{
+  width:11px; height:11px; border-radius:50%; margin-top:5px; flex:0 0 auto;
+  background:#efe3cb; border:2px solid rgba(120,95,60,.6); box-sizing:border-box;
+}
+.dpaper .tl-stem{ flex:1 1 auto; width:2px; background:rgba(120,95,60,.28); margin-top:3px }
+.dpaper .tl-node.night .tl-pin{ background:#5a4a33; border-color:#3a2c1c }
+.dpaper .tl-node.priv  .tl-pin{ background:#8f2d22; border-color:#6d2018 }
+
+.dpaper .tl-body{ flex:1; min-width:0; padding:0 0 17px }
+.dpaper .tl-head{ display:flex; align-items:baseline; gap:9px; margin-bottom:4px; flex-wrap:wrap }
+.dpaper .tl-when{
+  font-family:ui-monospace,Menlo,monospace; font-size:11.5px; color:#8a7455;
+  font-variant-numeric:tabular-nums; letter-spacing:.02em;
+}
+.dpaper .tl-where{
+  font-size:10.5px; padding:1.5px 8px; border-radius:5px; color:#5f4c30;
+  background:rgba(120,95,60,.16); letter-spacing:.06em;
+  font-family:-apple-system,"PingFang SC",sans-serif;
+}
+.dpaper .tl-count{ font-size:10.5px; color:#a8977c; margin-left:auto }
+.dpaper .tl-text{
+  font-size:14px; line-height:1.82; color:#3a2c1c;
+  font-family:"Kaiti SC","STKaiti","KaiTi",serif;
+}
+.dpaper .tl-masked{ color:#8e7a5e; font-style:italic }
+
+/* ---- 私密日记：数字密码锁 ---- */
+.inkpad{
+  position:relative; z-index:2; width:230px; text-align:center; color:#e7dcc6;
+  font-family:-apple-system,"PingFang SC",sans-serif;
+}
+.inkpad .p-title{ font-size:13px; letter-spacing:.2em; opacity:.85; margin-bottom:5px }
+.inkpad .p-sub{ font-size:11px; opacity:.6; line-height:1.7; margin-bottom:13px }
+.inkpad .p-dots{ display:flex; gap:12px; justify-content:center; margin-bottom:15px }
+.inkpad .p-dots i{
+  width:11px; height:11px; border-radius:50%; box-sizing:border-box;
+  border:1.5px solid rgba(240,230,210,.55); transition:background .16s, transform .16s;
+}
+.inkpad .p-dots i.on{ background:#f0e6d2; transform:scale(1.16) }
+.inkpad .p-keys{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px }
+.inkpad .p-keys button{
+  font:inherit; font-size:19px; padding:11px 0; border-radius:9px; cursor:pointer;
+  background:rgba(240,230,210,.10); border:1px solid rgba(240,230,210,.22); color:#f0e6d2;
+  transition:background .14s, transform .08s;
+}
+.inkpad .p-keys button:hover{ background:rgba(240,230,210,.19) }
+.inkpad .p-keys button:active{ transform:scale(.94) }
+.inkpad .p-keys button.wide{ grid-column:span 1; font-size:13px; letter-spacing:.1em }
+.inkpad .p-err{ font-size:11.5px; color:#ffb3a6; margin-top:11px; min-height:16px }
 </style>
 </head>
 <body>
@@ -2185,7 +2249,9 @@ function tickClock(){
   $('clkDate').textContent = (d.getMonth()+1) + '月' + d.getDate() + '日 周' + wk;
   var P = placeAt(d);
   $('clkWhere').textContent = P ? (P.cn + ' · ' + (ACT_CN[P.act] || '')) : '—';
-  if(VIEW === 'diary') renderDiary();
+  /* 这里以前有一句 if(VIEW==='diary') renderDiary()，而 tickClock 是每秒跑的 ——
+     等于日记每秒钟被整个重建一次：刚展开的原始记录、墨迹解锁、滚动位置全被抹掉。
+     日记只在切换日期或数据更新时才需要重绘，秒针不管它。 */
 }
 setInterval(tickClock, 1000);
 
@@ -2789,12 +2855,23 @@ function renderDiary(){
 
   /* 私密的一天：整段正文默认被墨迹盖住，长按才散开 */
   if(hasSecret){
+    // 密码就是这一天的数字：9 月 29 日 → 0929
+    var pw = day.date.slice(5,7) + day.date.slice(8,10);
     html += '<div class="inkveil" id="inkVeil">'
       + '<i class="inkblot"></i><i class="inkblot"></i><i class="inkblot"></i>'
       + '<i class="inkblot"></i><i class="inkblot"></i>'
-      + '<div class="inkctr"><div class="inklock">🔒</div>'
-      + '<div class="inktip">长按 1.5 秒打开</div>'
-      + '<div class="inkbar"><i></i></div></div></div>';
+      + '<div class="inkpad" id="inkPad">'
+        + '<div class="p-title">🔒 这一天锁着</div>'
+        + '<div class="p-sub">需要这一天的日期才能打开<br>（月 日，四位数字）</div>'
+        + '<div class="p-dots" id="pDots"><i></i><i></i><i></i><i></i></div>'
+        + '<div class="p-keys" id="pKeys">'
+          + [1,2,3,4,5,6,7,8,9].map(function(n){ return '<button data-k="' + n + '">' + n + '</button>'; }).join('')
+          + '<button class="wide" data-k="del">删除</button>'
+          + '<button data-k="0">0</button>'
+          + '<button class="wide" data-k="ok">打开</button>'
+        + '</div>'
+        + '<div class="p-err" id="pErr"></div>'
+      + '</div></div>';
   }
 
   /* 她的随笔 */
@@ -2802,34 +2879,63 @@ function renderDiary(){
 
   /* 原始记录：默认收起，想看细节时再展开 */
   if(items.length){
-    var trail = trajectoryOfItems(items);        // 她这一天物理上走过哪
+    var trail = trajectoryOfItems(items);
     html += '<div class="draw-wrap"><button class="draw-btn" id="dnRaw">'
       + '当天 ' + items.length + ' 条原始记录 ▾</button><div class="draw-body" id="dnRawBody">';
+
     if(trail.length){
-      html += '<div class="trail-line" style="margin-bottom:13px;font-size:12.5px;color:#6b5940;'
-        + 'font-family:-apple-system,\'PingFang SC\',sans-serif">她走过：'
-        + trail.map(function(p){ return '<b>' + esc(p) + '</b>'; }).join(' → ') + '</div>';
+      html += '<div class="trail-line">她走过：'
+        + trail.map(function(p){ return '<b>' + esc(p) + '</b>'; }).join('<i>→</i>') + '</div>';
     }
-    html += '<div class="tl">';
-    items.forEach(function(it){
-      var h = parseInt(it.time.slice(0,2),10);
-      var kind = kindOf(it.text);
-      var night = (h < 6 || h >= 22);
-      // 从这条记录里推一个地点
-      var place = '';
+
+    /* 按地点把当天切成几段：同一个地方连着待着就算一段，
+       这样出来是一条路线，而不是一长串挤在一起的时间点。 */
+    function placeOf(it){
       for(var pi = 0; pi < PLACE_HINT.length; pi++){
-        if(PLACE_HINT[pi][0].test(it.text)){ place = PLACE_HINT[pi][1]; break; }
+        if(PLACE_HINT[pi][0].test(it.text)) return PLACE_HINT[pi][1];
       }
-      html += '<div class="tl-row' + (night ? ' night' : '') + (kind === 'secret' ? ' priv' : '') + '">'
-        + '<span class="tl-t">' + it.time + '</span>'
-        + '<span class="tl-dot"></span>'
-        + '<span class="tl-c">'
-          + (place ? '<span class="tl-place">' + esc(place) + '</span><br>' : '')
-          + '<span class="tl-x">' + (kind === 'secret' ? '（这一段她没有写清楚）' : esc(it.text)) + '</span>'
-        + '</span></div>';
+      return '';
+    }
+    var segs = [];
+    items.forEach(function(it){
+      var pl = placeOf(it);
+      var lastSeg = segs[segs.length - 1];
+      if(lastSeg && pl && lastSeg.place === pl){ lastSeg.items.push(it); lastSeg.end = it.time; }
+      else segs.push({ place: pl, start: it.time, end: it.time, items: [it] });
     });
-    html += '</div></div></div>';
+
+    html += '<div class="tl">';
+    segs.forEach(function(sg, si){
+      var first = sg.items[0];
+      var h = parseInt(first.time.slice(0,2),10);
+      var night = (h < 6 || h >= 22);
+      var anyPriv = sg.items.some(function(x){ return kindOf(x.text) === 'secret'; });
+      var span = (sg.start === sg.end) ? sg.start : (sg.start + ' – ' + sg.end);
+      // 这一段里挑一句最能代表的话（优先非私密、较长的）
+      var pickIt = null;
+      for(var qi = 0; qi < sg.items.length; qi++){
+        if(kindOf(sg.items[qi].text) !== 'secret'){ pickIt = sg.items[qi]; break; }
+      }
+      if(!pickIt) pickIt = first;
+      html += '<div class="tl-node' + (night ? ' night' : '') + (anyPriv ? ' priv' : '') + '">'
+        + '<div class="tl-rail"><i class="tl-pin"></i>'
+          + (si < segs.length - 1 ? '<i class="tl-stem"></i>' : '') + '</div>'
+        + '<div class="tl-body">'
+          + '<div class="tl-head">'
+            + '<span class="tl-when">' + span + '</span>'
+            + (sg.place ? '<span class="tl-where">' + esc(sg.place) + '</span>' : '')
+            + '<span class="tl-count">' + sg.items.length + ' 条</span>'
+          + '</div>'
+          + '<div class="tl-text">'
+            + (anyPriv ? '<span class="tl-masked">（这一段她没有写清楚）</span>'
+                       : esc(pickIt.text))
+          + '</div>'
+        + '</div></div>';
+    });
+    html += '</div>';
+    html += '</div></div>';
   }
+
   html += '</div>';
 
   html += extraBlock(extraByDate(DIARY_SEL));
@@ -2874,64 +2980,83 @@ function renderDiary(){
     };
   });
   var rb = $('dnRaw');
-  if(rb) rb.onclick = function(){
-    var bd = $('dnRawBody');
-    var on = bd.classList.toggle('open');
-    rb.textContent = '当天 ' + items.length + ' 条原始记录 ' + (on ? '▴' : '▾');
-    try{ sfx('click'); }catch(e){}
-  };
+  if(rb){
+    // 记在内存里，重绘后还能保持展开
+    if(!window.__DN_RAW) window.__DN_RAW = {};
+    if(window.__DN_RAW[DIARY_SEL] && $('dnRawBody')){
+      $('dnRawBody').classList.add('open');
+      rb.textContent = '当天 ' + items.length + ' 条原始记录 ▴';
+    }
+    rb.onclick = function(){
+      var bd = $('dnRawBody');
+      var on = bd.classList.toggle('open');
+      window.__DN_RAW[DIARY_SEL] = on;
+      rb.textContent = '当天 ' + items.length + ' 条原始记录 ' + (on ? '▴' : '▾');
+      try{ sfx('click'); }catch(e){}
+    };
+  }
   bindInkVeil();
 }
 
-/* 墨迹封层：长按 1.5 秒，墨散开，字露出来 */
+/* 墨迹封层：输入这一天的日期（月日四位数字）才能打开 */
 function bindInkVeil(){
   var veil = $('inkVeil'), paper = $('dpaper');
   if(!veil || !paper) return;
-  var bar = veil.querySelector('.inkbar > i');
-  var raf = null, t0 = 0;
-  var DUR = 1500;
 
-  function reset(){
-    if(raf) cancelAnimationFrame(raf);
-    raf = null;
-    if(bar) bar.style.setProperty('--p', '0%');
-    veil.classList.remove('holding');
+  // 密码就是当天日期：2026-09-29 → 0929
+  var pw = (DIARY_SEL || '').slice(5,7) + (DIARY_SEL || '').slice(8,10);
+  var typed = '';
+
+  var dots = veil.querySelectorAll('#pDots i');
+  var err  = veil.querySelector('#pErr');
+
+  // 已经解开过的这一天，直接就是开的
+  var opened = false;
+  try{ opened = sessionStorage.getItem('saku_ink_' + DIARY_SEL) === '1'; }catch(e){}
+  if(opened){ veil.style.display = 'none'; paper.classList.add('ink-open'); return; }
+
+  function paint(){
+    for(var i = 0; i < dots.length; i++) dots[i].classList.toggle('on', i < typed.length);
   }
-  function step(){
-    var p = Math.min(1, (Date.now() - t0) / DUR);
-    if(bar) bar.style.setProperty('--p', (p * 100).toFixed(1) + '%');
-    if(p >= 1){ open(); return; }
-    raf = requestAnimationFrame(step);
-  }
-  function start(ev){
-    if(ev && ev.preventDefault) ev.preventDefault();
-    t0 = Date.now();
-    veil.classList.add('holding');
-    raf = requestAnimationFrame(step);
-  }
-  function open(){
-    reset();
+  function unlock(){
     veil.classList.add('gone');
     paper.classList.add('ink-open');
+    try{ sessionStorage.setItem('saku_ink_' + DIARY_SEL, '1'); }catch(e){}
     try{ sfx('relic'); }catch(e){}
     setTimeout(function(){ veil.style.display = 'none'; }, 520);
   }
-  veil.addEventListener('pointerdown', start);
-  veil.addEventListener('pointerup', reset);
-  veil.addEventListener('pointerleave', reset);
-  veil.addEventListener('pointercancel', reset);
-  // 已经解开过的这一天，重新进来就直接是开的
-  try{
-    if(sessionStorage.getItem('saku_ink_' + DIARY_SEL) === '1'){
-      veil.style.display = 'none';
-      paper.classList.add('ink-open');
+  function press(k){
+    if(err) err.textContent = '';
+    if(k === 'del'){ typed = typed.slice(0, -1); paint(); return; }
+    if(k === 'ok'){
+      if(typed === pw){ unlock(); }
+      else { typed = ''; paint(); if(err) err.textContent = '不对。'; try{ sfx('deny'); }catch(e){} }
+      return;
     }
-  }catch(e){}
-  var _open = open;
-  open = function(){
-    try{ sessionStorage.setItem('saku_ink_' + DIARY_SEL, '1'); }catch(e){}
-    _open();
-  };
+    if(typed.length >= 4) return;
+    typed += k; paint();
+    try{ sfx('click'); }catch(e){}
+    if(typed.length === 4){
+      // 够了四位就自动判一次，省得再点"打开"
+      setTimeout(function(){
+        if(typed === pw) unlock();
+        else { typed = ''; paint(); if(err) err.textContent = '不对。再想想。'; try{ sfx('deny'); }catch(e){} }
+      }, 180);
+    }
+  }
+  var keys = veil.querySelector('#pKeys');
+  if(keys) keys.addEventListener('click', function(ev){
+    var btn = ev.target.closest('button');
+    if(!btn) return;
+    ev.stopPropagation();
+    press(btn.dataset.k);
+  });
+  // 点墨迹空白处不算数，别误触
+  veil.addEventListener('pointerdown', function(ev){
+    if(ev.target.closest('#inkPad')) return;
+    ev.preventDefault();
+  });
+  paint();
 }
 
 function bindDiaryBar(){
