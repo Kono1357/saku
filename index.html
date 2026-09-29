@@ -344,12 +344,15 @@ function pickBySeed(arr, seed){ return arr[Math.abs(seed) % arr.length]; }
 function extraBlock(list){
   if(!list || !list.length) return '';
   var rows = list.map(function(r){
-    var t = OUTCOME_TEXT[r.outcome] || OUTCOME_TEXT.quit;
+    var isReb = (r.outcome === 'rebuild');
+    var t = isReb ? REBUILD_TEXT : (OUTCOME_TEXT[r.outcome] || OUTCOME_TEXT.quit);
     var txt = pickBySeed(t, (r.at || 0) % 997);
     var icon = OUTCOME_ICON[r.outcome] || '…';
     var cn = OUTCOME_CN[r.outcome] || '';
-    var detail = '第 ' + (r.turns||'?') + ' 回合 · 深渊 ' + (r.abyss != null ? r.abyss : '?') + '/12'
-      + (r.turnLimit ? '（上限 ' + r.turnLimit + '）' : '');
+    var detail = isReb
+      ? '用了构筑权 · 她改了开局'
+      : ('第 ' + (r.turns||'?') + ' 回合 · 深渊 ' + (r.abyss != null ? r.abyss : '?') + '/12'
+         + (r.turnLimit ? '（上限 ' + r.turnLimit + '）' : ''));
     return '<li class="xr xr-' + (r.outcome||'quit') + '">'
       + '<span class="xt">' + (r.time || '--:--') + '</span>'
       + '<span class="xx">'
@@ -392,6 +395,9 @@ ul.xlist .xm{font-size:11px; color:var(--dim2); letter-spacing:.3px}
 ul.xlist .xr-lose .xx b{color:#c0706a}
 ul.xlist .xr-true .xx b{color:#c9b98f}
 ul.xlist .xr-quit .xx b{color:var(--dim)}
+ul.xlist .xr-rebuild .xx b{color:#c9a3e0}
+ul.xlist .xr-rebuild{background:linear-gradient(90deg,rgba(160,110,210,.10),transparent 70%);
+  border-radius:9px; padding-left:9px; padding-right:6px; margin:2px -6px 2px -9px}
 
 
 /* ================= 底部抽屉 ================= */
@@ -708,6 +714,7 @@ ul.xlist .xr-quit .xx b{color:var(--dim)}
 <script src="saku-data.enc.js"></script>
 <script src="saku-ascii.enc.js"></script>
 <script src="maze.enc.js"></script>
+<script src="saku-engine.enc.js"></script>
 <script>
 /* =====================================================================
    朔 · 观察窗口（手机桌面风格）
@@ -715,6 +722,11 @@ ul.xlist .xr-quit .xx b{color:var(--dim)}
 const $ = id => document.getElementById(id);
 const IS_DEPLOY = true;
 const STORE_KEY = 'saku_pw';
+const WORLD_START = {
+  date:  new Date(2026, 8, 19, 0, 0, 0),
+  anchor:new Date(2026, 8, 8, 0, 0, 0),
+  seed:  20260919
+};
 
 const APPS = [
   {id:'calendar',ico:'▦', name:'日历'},
@@ -995,8 +1007,16 @@ const OUTCOME_TEXT = {
     '像是玩到一半被打断，纸还摊在桌上，人已经睡着了。',
   ],
 };
-const OUTCOME_ICON = { normal:'⚄', true:'★', lose:'✖', quit:'…' };
-const OUTCOME_CN = { normal:'普通结局', true:'真结局', lose:'败北', quit:'未走完' };
+/* 用了「构筑权」时的额外回响：她强行改写了命运 */
+const REBUILD_TEXT = [
+  '今天她似乎用某种意志强行改变了命运的轨迹。',
+  '有什么东西被她硬生生扳回了另一条路上，像是伸手把倒下的东西扶正。',
+  '她在那条路上停了一下，然后选了另一条。命运让了一步。',
+  '梦里有一步本该走下去，被她伸手拦住了。',
+  '像是把一张纸上的字擦掉重写。她做得毫不犹豫。',
+];
+const OUTCOME_ICON = { normal:'⚄', true:'★', lose:'✖', quit:'…', rebuild:'✦' };
+const OUTCOME_CN = { normal:'普通结局', true:'真结局', lose:'败北', quit:'未走完', rebuild:'异世界回响' };
 
 /* ---------- 安全读写 ---------- */
 function extraLoad(){
@@ -1009,7 +1029,7 @@ function extraLoad(){
     return arr.filter(function(r){
       return r && typeof r === 'object'
         && typeof r.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.date)
-        && OUTCOME_TEXT[r.outcome];
+        && (OUTCOME_TEXT[r.outcome] || r.outcome === 'rebuild');
     });
   }catch(e){
     try{ localStorage.removeItem(EXTRA_KEY); }catch(e2){}
@@ -1059,7 +1079,20 @@ function bindBridge(){
     // 只认自己那个 iframe 发来的
     var frame = document.getElementById('gameFrame');
     if(frame && ev.source && ev.source !== frame.contentWindow) return;
-    var added = extraMerge(d.payload);
+    var payload = Array.isArray(d.payload) ? d.payload.slice() : [];
+    // 用了构筑权的局，额外补一条「异世界回响」
+    payload.forEach(function(r){
+      if(r && r.usedRebuild){
+        payload.push({
+          v: 1,
+          at: (r.at || Date.now()) + 60000,      // 排在正记录后面
+          date: r.date, time: r.time,
+          outcome: 'rebuild',
+          turns: r.turns, abyss: r.abyss, turnLimit: r.turnLimit,
+        });
+      }
+    });
+    var added = extraMerge(payload);
     if(added > 0){
       sfx('coin');
       if(VIEW === 'calendar') renderCalendar();
@@ -1722,11 +1755,18 @@ async function boot(serverMode){
                meta: '共 ' + d.total_events + ' 条记录，从 ' + d.born_at + ' 开始。' };
       var px = await fetch('/ascii/plan.json', {cache:'no-store'}).then(x => x.json()).catch(() => null);
       if(px){ PLAN = px.plan; PLACES = px.places; }
-      setInterval(async function(){
+      var raw = await fetch('/ascii/saku-data.json', {cache:'no-store'}).then(x => x.json()).catch(() => null);
+      if(raw && window.Saku){
+        RAW = raw;
+        var g = Saku.feed(WORLD_START, new Date(), raw);
+        DATA = { days: g.days, bornAt: g.bornAt, total: g.total,
+                 meta: '共 ' + g.total + ' 条记录，从 ' + g.bornAt + ' 开始。' };
+      }
+      setInterval(function(){
         try{
-          var rr = await fetch('/api/feed', {cache:'no-store'});
-          var dd = await rr.json();
-          DATA.days = dd.days; DATA.total = dd.total_events;
+          if(!RAW || !window.Saku) return;
+          var g2 = Saku.feed(WORLD_START, new Date(), RAW);
+          DATA.days = g2.days; DATA.total = g2.total;
           if(VIEW === 'now' || VIEW === 'archive'){
             if(VIEW === 'calendar') renderCalendar();
             else if(VIEW === 'diary') renderDiary();
@@ -1753,11 +1793,30 @@ async function boot(serverMode){
       }
       if(remember){ try{ localStorage.setItem(STORE_KEY, password); }catch(e){} }
       RAW = d;
-      DATA = { days: d.days, bornAt: d.bornAt, total: d.total,
-               meta: '共 ' + d.total + ' 条记录，从 ' + d.bornAt + ' 开始。' };
+      if(window.SAKU_ENGINE_ENC){
+        try{
+          var engTxt = await decryptRaw(password, window.SAKU_ENGINE_ENC);
+          (new Function(engTxt))();
+        }catch(e0){}
+      }
+      if(!window.Saku) throw new Error('引擎没有加载');
+      var fresh = Saku.feed(WORLD_START, new Date(), d);
+      DATA = { days: fresh.days, bornAt: fresh.bornAt, total: fresh.total,
+               meta: '共 ' + fresh.total + ' 条记录，从 ' + fresh.bornAt + ' 开始。' };
       $('gate').classList.add('hide');
       $('home').classList.remove('hide');
       tickClock();
+      if(!window.__sakuTick){
+        window.__sakuTick = setInterval(function(){
+          try{
+            if(!RAW || !window.Saku) return;
+            var g2 = Saku.feed(WORLD_START, new Date(), RAW);
+            DATA.days = g2.days; DATA.total = g2.total;
+            if(VIEW === 'calendar') renderCalendar();
+            else if(VIEW === 'diary') renderDiary();
+          }catch(e){}
+        }, 60000);
+      }
     }catch(e){
       $('err').textContent = '密码不对，或者数据已损坏';
       $('go').textContent = '进入';
