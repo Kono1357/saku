@@ -2590,10 +2590,6 @@ async function boot(serverMode){
   tickClock();
   if(serverMode){
     try{
-      var r = await fetch('/api/feed', {cache:'no-store'});
-      var d = await r.json();
-      DATA = { days: d.days, bornAt: d.born_at, total: d.total_events,
-               meta: '共 ' + d.total_events + ' 条记录，从 ' + d.born_at + ' 开始。' };
       var px = await fetch('/ascii/plan.json', {cache:'no-store'}).then(x => x.json()).catch(() => null);
       if(px){ PLAN = px.plan; PLACES = px.places; }
       var raw = await fetch('/ascii/saku-data.json', {cache:'no-store'}).then(x => x.json()).catch(() => null);
