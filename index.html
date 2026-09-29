@@ -74,6 +74,13 @@ body{
 .dot{width:6px;height:6px;border-radius:50%;background:#7dd3fc;animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
 
+/* 图标色调：只做极淡的色相偏移，主体仍是毛玻璃 */
+.app[data-app="diary"] .ico{background:rgba(190,170,235,.16)}
+.app[data-app="calendar"] .ico{background:rgba(180,205,240,.15)}
+.app[data-app="game"] .ico{background:rgba(240,180,150,.15)}
+.app[data-app="wall"] .ico{background:rgba(150,220,210,.14)}
+.app[data-app="about"] .ico{background:rgba(200,200,215,.13)}
+
 /* 图标网格 */
 .grid{
   display:grid; gap:22px 16px;
@@ -88,21 +95,25 @@ body{
 .app:active{transform:scale(.9)}
 .app.zooming{opacity:0}
 .app .ico{
-  width:62px;height:62px;border-radius:17px;
+  width:62px;height:62px;border-radius:19px;
   display:flex;align-items:center;justify-content:center;
-  font-size:27px; line-height:1;
-  border:1px solid rgba(255,255,255,.13);
-  box-shadow:0 6px 16px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.12);
-  background:linear-gradient(165deg,#242c44,#161c2c);
-  transition:transform .22s cubic-bezier(.3,1.5,.5,1), box-shadow .22s;
+  font-size:26px; line-height:1; font-weight:300;
+  color:#f4f8ff;
+  border:1px solid rgba(255,255,255,.22);
+  background:rgba(255,255,255,.10);
+  -webkit-backdrop-filter:blur(10px) saturate(150%);
+  backdrop-filter:blur(10px) saturate(150%);
+  box-shadow:
+    0 4px 14px rgba(0,0,0,.28),
+    inset 0 1px 0 rgba(255,255,255,.26),
+    inset 0 -1px 0 rgba(255,255,255,.06);
+  text-shadow:0 1px 6px rgba(0,0,0,.5);
+  transition:transform .22s cubic-bezier(.3,1.5,.5,1), box-shadow .22s, background .22s;
 }
-.app.opening .ico{transform:scale(1.18); box-shadow:0 10px 26px rgba(0,0,0,.5)}
-.app .nm{font-size:11.5px; color:var(--dim); letter-spacing:.5px; white-space:nowrap}
-.app[data-app="calendar"] .ico{background:linear-gradient(165deg,#2b3040,#1a1d29)}
-.app[data-app="diary"] .ico{background:linear-gradient(165deg,#332b3c,#1e1926)}
-.app[data-app="game"] .ico{background:linear-gradient(165deg,#3a2b2b,#241a1a)}
-.app[data-app="about"] .ico{background:linear-gradient(165deg,#2d2a3c,#1b1926)}
-.app[data-app="wall"] .ico{background:linear-gradient(165deg,#2b3a44,#182228)}
+.app.opening .ico{transform:scale(1.18); background:rgba(255,255,255,.2);
+  box-shadow:0 10px 26px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.34)}
+.app .nm{font-size:11.5px; color:rgba(232,238,249,.82); letter-spacing:.5px; white-space:nowrap;
+  text-shadow:0 1px 4px rgba(0,0,0,.6)}
 
 /* ---------- 桌面壁纸 ---------- */
 #wallpaper{
@@ -274,6 +285,68 @@ ul.ditems .dt{flex:0 0 46px; font-size:12px; color:#9d8f68; font-variant-numeric
 ul.ditems .dx{flex:1; font-size:14.5px; color:#e2e9f5; line-height:1.85}
 .dfoot{font-size:14px; color:#cdd7e8; text-align:right; font-style:italic; letter-spacing:1px; opacity:.9}
 
+/* ---------- 底部抽屉（Bottom Sheet） ---------- */
+function sheetEl(){
+  var el = document.getElementById('sheet');
+  if(el) return el;
+  el = document.createElement('div');
+  el.id = 'sheet';
+  el.className = 'sheet';
+  el.innerHTML = '<div class="sheet-mask" id="sheetMask"></div>'
+    + '<div class="sheet-box" id="sheetBox">'
+    + '<div class="sheet-grab"></div>'
+    + '<div class="sheet-head"><div class="sh-l"><span class="sh-d" id="shD"></span>'
+    + '<span class="sh-w" id="shW"></span></div>'
+    + '<button class="sh-x" id="shX">关上</button></div>'
+    + '<div class="sheet-body" id="sheetBody"></div>'
+    + '</div>';
+  document.body.appendChild(el);
+  el.querySelector('#sheetMask').onclick = closeSheet;
+  el.querySelector('#shX').onclick = closeSheet;
+  return el;
+}
+function closeSheet(){
+  var el = document.getElementById('sheet');
+  if(!el) return;
+  el.classList.remove('on');
+  sfx('closeapp');
+  setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); }, 260);
+  CAL_SEL = null;
+}
+/* 时间轴卡片 */
+function tlItems(items){
+  return items.map(function(it){
+    var h = parseInt(it.time.slice(0,2),10);
+    var night = (h < 6 || h >= 22);
+    return '<div class="tl' + (night ? ' tl-night' : '') + '">'
+      + '<div class="tl-t">' + it.time + '</div>'
+      + '<div class="tl-dot"></div>'
+      + '<div class="tl-card">' + it.text + '</div>'
+      + '</div>';
+  }).join('');
+}
+function openDaySheet(key, rec){
+  var el = sheetEl();
+  var dt = new Date(key + 'T12:00:00');
+  $('shD').textContent = (+key.slice(5,7)) + ' 月 ' + (+key.slice(8,10)) + ' 日';
+  var lab = fmtDay(key);
+  $('shW').textContent = (rec && rec.weekday ? rec.weekday : '')
+    + (lab.tag ? ' · ' + lab.tag : '')
+    + (rec && rec.items.length ? ' · ' + rec.items.length + ' 条' : '');
+  var body = $('sheetBody');
+  var html = '';
+  if(rec && rec.items.length){
+    html += '<div class="tl-wrap">' + tlItems(rec.items) + '</div>';
+  } else {
+    html += '<div class="sh-empty">这一天她没有留下记录。</div>';
+  }
+  if(rec && rec.extra && rec.extra.length) html += extraBlock(rec.extra);
+  body.innerHTML = html;
+  body.scrollTop = 0;
+  el.classList.add('on');
+  sfx('openapp');
+}
+
 /* ---------- 界外记录板块 ---------- */
 function pickBySeed(arr, seed){ return arr[Math.abs(seed) % arr.length]; }
 function extraBlock(list){
@@ -327,6 +400,176 @@ ul.xlist .xm{font-size:11px; color:var(--dim2); letter-spacing:.3px}
 ul.xlist .xr-lose .xx b{color:#c0706a}
 ul.xlist .xr-true .xx b{color:#c9b98f}
 ul.xlist .xr-quit .xx b{color:var(--dim)}
+
+
+/* ================= 底部抽屉 ================= */
+.sheet{position:fixed; inset:0; z-index:180; pointer-events:none}
+.sheet.on{pointer-events:auto}
+.sheet-mask{
+  position:absolute; inset:0; background:rgba(4,7,13,.62);
+  -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px);
+  opacity:0; transition:opacity .26s;
+}
+.sheet.on .sheet-mask{opacity:1}
+.sheet-box{
+  position:absolute; left:0; right:0; bottom:0;
+  max-height:82vh; display:flex; flex-direction:column;
+  background:linear-gradient(180deg,#141b2b,#0e1420);
+  border-top:1px solid rgba(255,255,255,.12);
+  border-radius:22px 22px 0 0;
+  box-shadow:0 -10px 40px rgba(0,0,0,.6);
+  transform:translateY(100%);
+  transition:transform .32s cubic-bezier(.2,.9,.25,1);
+}
+.sheet.on .sheet-box{transform:translateY(0)}
+.sheet-grab{width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,.22);
+            margin:9px auto 0;flex:0 0 auto}
+.sheet-head{
+  display:flex; align-items:baseline; gap:10px; flex:0 0 auto;
+  padding:10px 18px 12px; border-bottom:1px solid rgba(255,255,255,.07);
+}
+.sh-l{display:flex; align-items:baseline; gap:9px; flex:1; min-width:0}
+.sh-d{font-size:19px; letter-spacing:1.5px; color:#f2ecdc; font-weight:600}
+.sh-w{font-size:12px; color:var(--dim2)}
+.sh-x{
+  border:1px solid var(--line); background:rgba(255,255,255,.05); color:var(--dim);
+  font-family:inherit; font-size:12.5px; border-radius:999px; padding:5px 13px; cursor:pointer;
+}
+.sh-x:active{background:rgba(255,255,255,.13)}
+.sheet-body{
+  flex:1; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  padding:14px 16px calc(var(--safe-bot) + 26px);
+}
+.sh-empty{color:var(--dim2); font-size:13.5px; text-align:center; padding:26px 0}
+
+/* ================= 时间轴 ================= */
+.tl-wrap{position:relative; padding-left:4px}
+.tl{position:relative; display:flex; gap:12px; padding-bottom:12px}
+.tl:last-child{padding-bottom:2px}
+.tl-t{
+  flex:0 0 44px; font-size:12px; color:#9d8f68; font-variant-numeric:tabular-nums;
+  padding-top:9px; text-align:right; letter-spacing:.3px;
+}
+.tl-dot{
+  flex:0 0 9px; width:9px; height:9px; border-radius:50%; margin-top:12px;
+  background:rgba(201,185,143,.55); box-shadow:0 0 0 3px rgba(201,185,143,.12);
+  position:relative;
+}
+.tl-dot::after{
+  content:""; position:absolute; left:50%; top:14px; width:1px; height:calc(100% + 14px);
+  background:linear-gradient(180deg,rgba(201,185,143,.28),rgba(201,185,143,.03));
+  transform:translateX(-50%);
+}
+.tl:last-child .tl-dot::after{display:none}
+.tl-card{
+  flex:1; min-width:0; font-size:14px; line-height:1.8; color:#e2e9f5;
+  background:linear-gradient(180deg,rgba(255,255,255,.058),rgba(255,255,255,.022));
+  border:1px solid rgba(255,255,255,.075);
+  border-radius:12px; padding:9px 13px;
+}
+.tl-night .tl-card{background:linear-gradient(180deg,rgba(120,140,190,.09),rgba(120,140,190,.03));
+  color:#c3cddd; border-color:rgba(140,160,200,.14)}
+.tl-night .tl-dot{background:rgba(140,165,215,.6); box-shadow:0 0 0 3px rgba(140,165,215,.12)}
+
+.cal-tip{text-align:center; color:var(--dim2); font-size:12.5px; padding:18px 0 6px}
+.cal-cell .dn2{font-size:14.5px}
+.cal-cell .dots{bottom:11px}
+.cal-cell .dots i{width:3.5px;height:3.5px;box-shadow:0 0 4px rgba(201,185,143,.8)}
+
+/* ================= 日记：手帐 ================= */
+.diary-paper{
+  position:relative; overflow:hidden;
+  border:1px solid rgba(139,115,85,.32); border-radius:16px;
+  padding:20px 20px 18px;
+  background:
+    radial-gradient(120% 90% at 15% 0%, rgba(255,252,242,.055), transparent 60%),
+    repeating-linear-gradient(0deg, rgba(201,185,143,.045) 0 1px, transparent 1px 29px),
+    linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.012));
+  box-shadow:0 10px 30px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.06);
+  font-family:"Songti SC","STSong","Noto Serif CJK SC",Georgia,serif;
+}
+/* 纸纹噪点 */
+.diary-paper::before{
+  content:""; position:absolute; inset:0; pointer-events:none; opacity:.32;
+  background-image:
+    radial-gradient(rgba(255,255,255,.055) 1px, transparent 1px),
+    radial-gradient(rgba(0,0,0,.16) 1px, transparent 1px);
+  background-size:3px 3px, 5px 5px;
+  background-position:0 0, 2px 2px;
+}
+.dmeta{
+  display:flex; align-items:center; gap:9px; margin-bottom:12px;
+  font-family:-apple-system,"PingFang SC",sans-serif;
+}
+.dm-w{font-size:11.5px; color:var(--dim2); letter-spacing:1px}
+.dm-s{
+  font-size:11.5px; color:var(--accent); border:1px solid rgba(201,185,143,.34);
+  border-radius:999px; padding:1px 9px; letter-spacing:1px;
+}
+.dhead{display:flex; align-items:baseline; gap:10px; margin-bottom:12px}
+.dhead .d1{font-size:23px; letter-spacing:2px; color:#f5f0e2; font-weight:600}
+.dhead .d2{font-size:12px; color:var(--accent); letter-spacing:1px}
+.dsum{
+  font-size:13.5px; color:rgba(201,185,143,.92); line-height:1.9; letter-spacing:.4px;
+  font-family:-apple-system,"PingFang SC",sans-serif;
+}
+.dsep{
+  height:1px; margin:16px 0;
+  background:linear-gradient(90deg,rgba(201,185,143,.42),rgba(201,185,143,.06) 70%,transparent);
+}
+.dsep-thin{margin:14px 0 12px; opacity:.55}
+.drow{display:flex; gap:14px; padding:9px 0; align-items:baseline}
+.drow .dt{
+  flex:0 0 46px; font-size:12px; color:#a8916a; font-variant-numeric:tabular-nums;
+  font-family:-apple-system,"PingFang SC",sans-serif; letter-spacing:.3px;
+}
+.drow .dx{flex:1; font-size:15.5px; color:#eee8db; line-height:1.95; letter-spacing:.2px}
+.dnight .dx{color:#c8d0de}
+.dfoot{
+  font-size:14.5px; color:rgba(214,224,240,.9); text-align:right; letter-spacing:1.2px;
+  font-style:italic; padding-top:2px;
+}
+
+/* 空日记 */
+.dpaper-empty{display:flex; align-items:center; justify-content:center; min-height:56vh}
+.dempty{text-align:center; padding:10px 0}
+.dem-art{
+  font-family:ui-monospace,Menlo,Consolas,monospace;
+  font-size:13px; line-height:1.3; white-space:pre; margin:0 0 18px;
+  color:rgba(201,185,143,.72); text-shadow:0 0 24px rgba(201,185,143,.22);
+}
+.dem-say{
+  font-size:16px; color:#e8e0cd; letter-spacing:1.5px; margin-bottom:9px;
+  font-family:"Songti SC","STSong",Georgia,serif;
+}
+.dem-sub{font-size:12px; color:var(--dim2); letter-spacing:1px}
+
+/* ---------- 开发者模式 ---------- */
+.dev-stat{display:flex; gap:14px; flex-wrap:wrap; margin:10px 0 4px}
+.dev-stat span{font-size:12.5px; color:var(--dim2)}
+.dev-stat b{font-size:17px; color:var(--accent); font-weight:600}
+.dev-btns{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px}
+.dev-btn{
+  border:1px solid rgba(201,185,143,.35); background:rgba(201,185,143,.11);
+  color:#e8dcb4; font-family:inherit; font-size:13px; border-radius:9px;
+  padding:8px 14px; cursor:pointer;
+}
+.dev-btn:active{transform:scale(.97); background:rgba(201,185,143,.2)}
+.dev-btn.dan{border-color:rgba(192,112,106,.5); background:rgba(192,112,106,.1); color:#e0a09a}
+.dev-item{
+  border:1px solid rgba(255,255,255,.07); border-radius:10px; padding:9px 11px;
+  margin-bottom:8px; background:rgba(255,255,255,.028);
+}
+.di-top{display:flex; align-items:baseline; gap:8px; margin-bottom:4px}
+.di-t{font-size:11.5px; color:#9d8f68; font-variant-numeric:tabular-nums}
+.di-p{font-size:11px; color:var(--dim2); border:1px solid var(--line); border-radius:999px; padding:0 7px}
+.di-x{font-size:14px; color:#e2e9f5; line-height:1.75}
+.di-layer{display:flex; gap:6px; flex-wrap:wrap; margin-top:7px}
+.dl{font-size:10.5px; border-radius:5px; padding:1px 7px; letter-spacing:.3px}
+.dl-scene{background:rgba(111,168,220,.16); color:#9cc6ea}
+.dl-size{background:rgba(255,255,255,.06); color:var(--dim2)}
+.dl-tail{background:rgba(127,199,154,.16); color:#8fd4ab}
+.dl-warn{background:rgba(192,112,106,.18); color:#e0a09a}
 
 /* ---------- 日历 ---------- */
 .cal-head{
@@ -487,9 +730,10 @@ const APPS = [
   {id:'diary',   ico:'✎', name:'日记'},
   {id:'wall',    ico:'▧', name:'壁纸'},
   {id:'about',   ico:'◌', name:'关于'},
+  {id:'dev',     ico:'⚙', name:'开发者', hidden:true},
 ];
 
-let DATA = null, PLAN = null, PLACES = null, VIEW = null, clockSkew = 0;
+let DATA = null, PLAN = null, PLACES = null, VIEW = null, clockSkew = 0, RAW = null;
 let DATA_RAW = null;
 
 /* ============================================================
@@ -881,6 +1125,7 @@ function showView(id, originEl){
   if(id === 'diary') renderDiary();
   else if(id === 'calendar') renderCalendar();
   else if(id === 'wall') renderWall();
+  else if(id === 'dev') devRender();
   else if(id === 'about') renderAbout();
   else if(id === 'game'){
     body.innerHTML = '<div class="game-shell"><iframe class="game-frame" id="gameFrame" title="一页迷宫"></iframe></div>'
@@ -950,7 +1195,7 @@ function renderDiary(){
   if(!DATA) return;
   var body = $('viewBody');
   var days = (DATA.days || []).slice().reverse();
-  if(!days.length){ body.innerHTML = '<div class="empty">她还没开始写。</div>'; return; }
+  if(!days.length){ body.innerHTML = emptyDiary(); return; }
   if(!DIARY_SEL || !days.some(function(d){ return d.date === DIARY_SEL; })) DIARY_SEL = days[0].date;
 
   var day = days.filter(function(d){ return d.date === DIARY_SEL; })[0];
@@ -977,18 +1222,31 @@ function renderDiary(){
           + parseInt(d.date.slice(5,7),10) + '/' + parseInt(d.date.slice(8,10),10) + '</button>';
       }).join('') + '</div>';
 
+  if(!items.length){
+    html += '<div class="diary-paper dpaper-empty">' + emptyDiary() + '</div>';
+    body.innerHTML = html;
+    bindDiaryBar();
+    return;
+  }
+  var weather = guessWeather(day);
+
   html += '<div class="diary-paper">'
+    + '<div class="dmeta">'
+      + '<span class="dm-w">' + day.weekday + '</span>'
+      + '<span class="dm-s">' + weather + '</span>'
+    + '</div>'
     + '<div class="dhead"><span class="d1">' + mo + ' 月 ' + dd + ' 日</span>'
-    + '<span class="d2">' + day.weekday + (lab.tag ? ' · ' + lab.tag : '') + '</span></div>'
+    + '<span class="d2">' + (lab.tag ? lab.tag : '') + '</span></div>'
     + '<div class="dsum">' + pick(OPENERS, seed).replace('{n}', items.length)
         .replace('{a}', first).replace('{b}', last) + '</div>'
-    + '<div class="dline"></div>'
-    + '<ul class="ditems">'
+    + '<div class="dsep"></div>'
     + picked.map(function(it){
-        return '<li><span class="dt">' + it.time + '</span><span class="dx">' + it.text + '</span></li>';
+        var h = parseInt(it.time.slice(0,2),10);
+        return '<div class="drow' + ((h < 6 || h >= 22) ? ' dnight' : '') + '">'
+          + '<span class="dt">' + it.time + '</span>'
+          + '<span class="dx">' + it.text + '</span></div>';
       }).join('')
-    + '</ul>'
-    + '<div class="dline"></div>'
+    + '<div class="dsep dsep-thin"></div>'
     + '<div class="dfoot">' + pick(MOODS, seedOf(day.date, 'mood')) + '</div>'
     + '</div>';
 
@@ -1000,9 +1258,35 @@ function renderDiary(){
   }
 
   body.innerHTML = html;
-  Array.prototype.forEach.call($('diaryBar').children, function(b){
-    b.onclick = function(){ sfx('click'); DIARY_SEL = b.dataset.d; body.scrollTop = 0; renderDiary(); };
+  bindDiaryBar();
+}
+function bindDiaryBar(){
+  var bar = $('diaryBar');
+  if(!bar) return;
+  Array.prototype.forEach.call(bar.children, function(b){
+    b.onclick = function(){ sfx('click'); DIARY_SEL = b.dataset.d; $('viewBody').scrollTop = 0; renderDiary(); };
   });
+}
+function guessWeather(day){
+  var t = (day.items || []).map(function(i){ return i.text; }).join('');
+  if(/雨/.test(t)) return '雨';
+  if(/雪/.test(t)) return '雪';
+  if(/阴|灰|云/.test(t)) return '阴';
+  return '晴';
+}
+/* 空日记：Q 版小像 + 一句她的话 */
+function emptyDiary(){
+  var arts = [
+    { art:'   ,---.\n  (  -  )\n   `---\'\n    | |\n   _| |_', say:'今天没什么想写的。' },
+    { art:'   ,---.\n  (  .  )\n   `---\'\n   /| |\\', say:'……算了，空着吧。' },
+    { art:'   ,---.\n  (  _  )\n   `---\'\n    | |', say:'还没开始写。' },
+  ];
+  var a = arts[(new Date().getDate()) % arts.length];
+  return '<div class="dempty">'
+    + '<pre class="dem-art">' + a.art + '</pre>'
+    + '<div class="dem-say">' + a.say + '</div>'
+    + '<div class="dem-sub">她还没在这一页留下字</div>'
+    + '</div>';
 }
 
 /* ---------- 归档 ---------- */
@@ -1058,32 +1342,17 @@ function renderCalendar(keepSel){
     if(rec) cls += ' has';
     if(key === todayKey) cls += ' today';
     if(key === CAL_SEL) cls += ' sel';
-    var inner = '<span>' + d + '</span>';
+    var inner = '<span class="dn2">' + d + '</span>';
     if(rec){
       var dots = '';
       for(var k = 0; k < Math.min(3, rec.items.length); k++) dots += '<i></i>';
-      inner += '<span class="dots">' + dots + '</span>';
-      if(rec.items.length) inner += '<span class="cnt">' + rec.items.length + ' 条</span>';
+      if(dots) inner += '<span class="dots">' + dots + '</span>';
       if(rec.extra && rec.extra.length) inner += '<span class="gdice">⚄</span>';
     }
     cells += '<div class="' + cls + '" data-day="' + (rec ? key : '') + '">' + inner + '</div>';
   }
 
-  var selHtml = '';
-  if(CAL_SEL && map[CAL_SEL]){
-    var r = map[CAL_SEL];
-    selHtml = '<div class="cal-day"><div class="dh"><span class="d">'
-      + (+CAL_SEL.slice(5,7)) + '月' + (+CAL_SEL.slice(8,10)) + '日</span>'
-      + '<span class="w">' + r.weekday + '</span>'
-      + '<span class="n">' + r.items.length + ' 条</span></div>'
-      + (r.items.length ? '<ul class="items" id="calList"></ul>' : '<div class="empty">这一天她没有留下记录。</div>')
-      + extraBlock(r.extra)
-      + '</div>';
-  } else if(CAL_SEL){
-    selHtml = '<div class="cal-day"><div class="empty">这一天她没有留下记录。</div></div>';
-  } else {
-    selHtml = '<div class="cal-day"><div class="empty">点一个有记录的日期，看那天她做了什么。</div></div>';
-  }
+  var selHtml = '<div class="cal-tip">点日期，看那天她做了什么</div>';
 
   body.innerHTML =
     '<div class="cal-head">'
@@ -1111,11 +1380,9 @@ function renderCalendar(keepSel){
     var k = el.dataset.day;
     if(!k) return;
     el.addEventListener('click', function(){
-      if(CAL_SEL === k){ CAL_SEL = null; }
-      else { CAL_SEL = k; sfx('click'); }
-      renderCalendar();
-      var d = document.querySelector('.cal-day');
-      if(d) d.scrollIntoView({behavior:'smooth', block:'nearest'});
+      CAL_SEL = k;
+      sfx('click');
+      openDaySheet(k, map[k]);
     });
   });
 }
@@ -1166,11 +1433,21 @@ function renderAbout(){
     <p>所有数据 AES-256-GCM 加密存在这个页面里，密码只在你手上。这个世界不依赖任何服务器——它靠现实时间算出来。</p>
     <p style="color:var(--dim2);font-size:12.5px">界面是手机桌面式的：想看什么点开什么，左上角的时钟和「她此刻在哪」会一直更新。</p>
   </div>
+  <div class="card"><h3>开发者</h3>
+    <p style="color:var(--dim);font-size:13.5px">沙盒测试：随机生成一段时间的记录，用来检查文本拼接有没有语义错乱或重复。数据只在内存里，关掉就没了，不写存档。</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+      <button class="dev-btn" id="dev7">测试 7 天</button>
+      <button class="dev-btn" id="dev30">测试 30 天</button>
+    </div>
+  </div>
   <div class="card"><h3>锁定</h3>
     <p><a id="lockLink" style="color:var(--blue);cursor:pointer">清除本机记住的密码</a></p>
   </div>`;
   var lk = $('lockLink');
   if(lk) lk.onclick = () => { try{ localStorage.removeItem(STORE_KEY); }catch(e){} location.reload(); };
+  var d7 = $('dev7'), d30 = $('dev30');
+  if(d7) d7.onclick = function(){ sfx('openapp'); showView('dev'); devBuild(7); };
+  if(d30) d30.onclick = function(){ sfx('openapp'); showView('dev'); devBuild(30); };
 }
 
 /* ---------- 桌游 ---------- */
@@ -1185,6 +1462,174 @@ async function openGame(){
     frame.srcdoc = '<body style="background:#2e2822;color:#f3e9d6;font-family:serif;padding:40px;line-height:1.8">'
       + '桌游载入失败：' + e.message + '</body>';
   }
+}
+
+/* ============================================================
+   开发者测试模式：沙盒生成 + 分层来源追踪
+   数据全在内存，不碰 localStorage
+   ============================================================ */
+let DEV = { days: [], n: 7, sel: null, showLayer: true };
+
+const DEV_SCENES = ['sleep','wake','commute','school_am','lunch','school_noon','school_pm',
+                    'commute_home','home_evening','study','night','wk_morning','wk_noon',
+                    'wk_afternoon','wk_evening'];
+const DEV_PLACE = {
+  sleep:'卧室', wake:'卧室', commute:'街上', school_am:'教室', lunch:'食堂',
+  school_noon:'图书室', school_pm:'教室', commute_home:'街上', home_evening:'厨房',
+  study:'书桌前', night:'浴室', wk_morning:'厨房', wk_noon:'咖啡店',
+  wk_afternoon:'公园', wk_evening:'天台',
+};
+/* 确定性 hash（不引入随机，保证同一批数据可复现） */
+function devHash(a, b){
+  var h = 2166136261, x = String(a) + '#' + String(b);
+  for(var i = 0; i < x.length; i++){ h ^= x.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h >>> 0);
+}
+/* 带去重的抽取，并记录来源 */
+function devPick(cfg){
+  var pool = cfg.pool, used = cfg.used, tag = cfg.tag;
+  if(!pool || !pool.length) return null;
+  var cand = pool.filter(function(x){ return used.indexOf(x) < 0; });
+  var reset = false;
+  if(!cand.length){ cand = pool.slice(); reset = true; }
+  var idx = devHash(cfg.seed, tag + cand.length) % cand.length;
+  var text = cand[idx];
+  used.push(text);
+  return { text: text, layer: tag, size: pool.length, at: idx, reset: reset };
+}
+
+function devBuild(n){
+  DEV.n = n; DEV.sel = null; DEV.days = [];
+  if(!RAW || !RAW.scenes) return;
+  var today = new Date();
+  for(var i = n - 1; i >= 0; i--){
+    var dt = new Date(today.getTime() - i * 86400000);
+    var date = dt.getFullYear() + '-' + pad(dt.getMonth()+1) + '-' + pad(dt.getDate());
+    var wk = dt.getDay() === 0 || dt.getDay() === 6;
+    var used = [];
+    var items = [];
+    var seedBase = devHash(date, 'day');
+    // 一天按 2 小时一格走
+    for(var h = (wk ? 8 : 6); h <= 23; h += 2){
+      var sc = devSceneFor(h, wk);
+      var r = null;
+      var roll = devHash(seedBase, 'r' + h) % 100;
+      if(roll < 22 && RAW.BODY){
+        r = devPick({ pool: (h >= 21 || h < 6) ? RAW.BODY.concat(RAW.BODY_NIGHT) : RAW.BODY,
+                      used: used, tag: 'BODY', seed: seedBase + h });
+      }
+      if(!r && roll >= 88 && RAW.CYCLE){
+        r = devPick({ pool: RAW.CYCLE, used: used, tag: 'CYCLE', seed: seedBase + h });
+      }
+      if(!r){
+        var grp = RAW.scenes[sc] || RAW.scenes.bedroom;
+        r = devPick({ pool: grp.body, used: used, tag: '场景/' + sc, seed: seedBase + h });
+      }
+      if(!r) continue;
+      // 尾巴
+      var tailTxt = '', tailTag = '';
+      var tr = devHash(seedBase, 't' + h) % 100;
+      if(tr < 12 && RAW.RAIN_TAILS){
+        tailTxt = RAW.RAIN_TAILS[devHash(seedBase, 'rt' + h) % RAW.RAIN_TAILS.length];
+        tailTag = '尾巴/雨';
+      } else if(tr < 20 && RAW.DICE_TAILS){
+        tailTxt = RAW.DICE_TAILS[devHash(seedBase, 'dt' + h) % RAW.DICE_TAILS.length];
+        tailTag = '尾巴/骰子';
+      } else if(tr < 28 && RAW.CHAPTER_TAILS){
+        tailTxt = RAW.CHAPTER_TAILS[devHash(seedBase, 'ct' + h) % RAW.CHAPTER_TAILS.length];
+        tailTag = '尾巴/章节';
+      }
+      items.push({
+        time: pad(h) + ':' + pad(devHash(seedBase, 'm' + h) % 60),
+        text: r.text + (tailTxt ? ' ' + tailTxt.trim() : ''),
+        layer: r.layer, size: r.size, at: r.at,
+        tail: tailTag || null, scene: sc, place: DEV_PLACE[sc] || '—',
+        reset: r.reset,
+      });
+    }
+    DEV.days.push({ date: date, weekday: ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'][dt.getDay()],
+                    items: items, extra: [] });
+  }
+  devRender();
+}
+function devSceneFor(h, wk){
+  if(wk){
+    if(h < 9) return 'wk_morning';
+    if(h < 12) return 'wk_noon';
+    if(h < 18) return 'wk_afternoon';
+    if(h < 22) return 'wk_evening';
+    return 'sleep';
+  }
+  if(h < 7) return 'wake';
+  if(h < 9) return 'commute';
+  if(h < 12) return 'school_am';
+  if(h < 14) return 'lunch';
+  if(h < 17) return 'school_pm';
+  if(h < 18) return 'commute_home';
+  if(h < 20) return 'home_evening';
+  if(h < 22) return 'study';
+  return 'night';
+}
+
+function devRender(){
+  var body = $('viewBody');
+  var n = DEV.days.length;
+  var total = DEV.days.reduce(function(a,d){ return a + d.items.length; }, 0);
+  var all = [];
+  DEV.days.forEach(function(d){ d.items.forEach(function(i){ all.push(i.text); }); });
+  var uniq = {};
+  all.forEach(function(t){ uniq[t] = 1; });
+  var dupRate = all.length ? Math.round((1 - Object.keys(uniq).length / all.length) * 100) : 0;
+
+  var html = '<div class="card hl"><h3>开发者测试模式</h3>'
+    + '<p style="font-size:13.5px;color:var(--dim)">沙盒数据，只在内存里。关闭这个页面就销毁，不写存档。</p>'
+    + '<div class="dev-stat">'
+      + '<span><b>' + n + '</b> 天</span>'
+      + '<span><b>' + total + '</b> 条记录</span>'
+      + '<span><b>' + dupRate + '%</b> 重复率</span>'
+    + '</div>'
+    + '<div class="dev-btns">'
+      + '<button class="dev-btn" id="devR7">重roll 7 天</button>'
+      + '<button class="dev-btn" id="devR30">重roll 30 天</button>'
+      + '<button class="dev-btn" id="devLayer">来源标注 ' + (DEV.showLayer ? '开' : '关') + '</button>'
+      + '<button class="dev-btn dan" id="devClose">销毁沙盒</button>'
+    + '</div></div>';
+
+  DEV.days.forEach(function(d, di){
+    var open = (DEV.sel === d.date) || (DEV.sel === null && di === DEV.days.length - 1);
+    html += '<div class="fold' + (open ? ' open' : '') + '" data-dev="' + d.date + '">'
+      + '<div class="fold-h"><span class="ar">▶</span><span>' + d.date.slice(5) + '</span>'
+      + '<span style="font-size:11.5px;color:var(--dim2)">' + d.weekday + '</span>'
+      + '<span class="sp"></span><span class="cnt">' + d.items.length + ' 条</span></div>'
+      + '<div class="fold-b">';
+    d.items.forEach(function(it){
+      html += '<div class="dev-item">'
+        + '<div class="di-top"><span class="di-t">' + it.time + '</span>'
+        + '<span class="di-p">' + it.place + '</span></div>'
+        + '<div class="di-x">' + it.text + '</div>'
+        + (DEV.showLayer
+            ? '<div class="di-layer">'
+                + '<span class="dl dl-scene">' + it.layer + '</span>'
+                + '<span class="dl dl-size">池 ' + it.size + ' 条 · 取第 ' + (it.at + 1) + '</span>'
+                + (it.tail ? '<span class="dl dl-tail">' + it.tail + '</span>' : '')
+                + (it.reset ? '<span class="dl dl-warn">池已用尽，重置</span>' : '')
+              + '</div>'
+            : '')
+        + '</div>';
+    });
+    html += '</div></div>';
+  });
+
+  body.innerHTML = html;
+  var r7 = $('devR7'), r30 = $('devR30'), dl = $('devLayer'), dc = $('devClose');
+  if(r7) r7.onclick = function(){ sfx('click'); devBuild(7); };
+  if(r30) r30.onclick = function(){ sfx('click'); devBuild(30); };
+  if(dl) dl.onclick = function(){ DEV.showLayer = !DEV.showLayer; sfx('click'); devRender(); };
+  if(dc) dc.onclick = function(){ sfx('closeapp'); DEV.days = []; closeView(); };
+  document.querySelectorAll('[data-dev]').forEach(function(f){
+    var h = f.querySelector('.fold-h');
+    h.onclick = function(){ f.classList.toggle('open'); sfx('click'); };
+  });
 }
 
 /* ---------- 壁纸 ---------- */
@@ -1261,7 +1706,7 @@ function renderWall(){
 function buildHome(){
   var g = $('grid');
   g.innerHTML = '';
-  APPS.forEach(function(a){
+  APPS.filter(function(a){ return !a.hidden; }).forEach(function(a){
     var el = document.createElement('div');
     el.className = 'app';
     el.dataset.app = a.id;
@@ -1318,6 +1763,7 @@ async function boot(serverMode){
         }catch(e2){}
       }
       if(remember){ try{ localStorage.setItem(STORE_KEY, password); }catch(e){} }
+      RAW = d;
       DATA = { days: d.days, bornAt: d.bornAt, total: d.total,
                meta: '共 ' + d.total + ' 条记录，从 ' + d.bornAt + ' 开始。' };
       $('gate').classList.add('hide');
