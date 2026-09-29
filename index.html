@@ -904,6 +904,15 @@ ul.xlist .xr-rebuild{background:linear-gradient(90deg,rgba(160,110,210,.10),tran
 .dev-warn span{font-size:12.5px;line-height:1.75;color:#f0c8c4}
 .dev-warn b{color:#ff9b90;letter-spacing:.5px}
 
+.cm-lock{padding:6px 0 2px}
+.cm-lock-t{font-size:12.5px; color:var(--dim); line-height:1.85; margin:0 0 11px}
+.cm-lockrow{display:flex; gap:9px; align-items:center}
+.cm-lockrow input{
+  flex:1; min-width:0; font:inherit; font-size:14px; padding:10px 13px;
+  background:rgba(0,0,0,.32); border:1px solid rgba(240,230,210,.16); border-radius:9px;
+  color:#e8dcb4; letter-spacing:.08em;
+}
+.cm-lockrow input:focus{outline:none; border-color:rgba(201,169,94,.62)}
 /* ---------- 投递箱里的内容管理 ---------- */
 .cm-stat{font-size:12.5px; color:var(--dim); line-height:2; margin-bottom:6px}
 .cm-stat b{color:#e8dcb4; font-size:15px; font-weight:600}
@@ -2806,8 +2815,19 @@ function renderDrop(){
       </div>
     </div>
 
-    <div class="card hl" id="cmCard" style="margin-top:14px;display:none">
+    <div class="card hl" id="cmCard" style="margin-top:14px">
       <h3>内容管理</h3>
+
+      <div id="cmLock" class="cm-lock">
+        <p class="cm-lock-t">这块要用密码解锁。解锁一次以后就不用再输。</p>
+        <div class="cm-lockrow">
+          <input type="password" id="cmPw" placeholder="密码" autocomplete="current-password">
+          <button class="dev-btn" id="cmUnlock">解锁</button>
+        </div>
+        <div class="cm-log" id="cmLockMsg"></div>
+      </div>
+
+      <div id="cmBody" style="display:none">
       <div id="cmStat" class="cm-stat">读取中…</div>
 
       <div class="cm-sec">
@@ -2838,6 +2858,11 @@ function renderDrop(){
         <div class="cm-t">部署</div>
         <div class="cm-deploy" id="cmDeploy">—</div>
       </div>
+
+      <div class="cm-sec" style="text-align:right">
+        <button class="dev-btn" id="cmLockAgain">锁定</button>
+      </div>
+      </div><!-- /cmBody -->
     </div>`;
 
   var file = $('dzFile');
@@ -2864,30 +2889,78 @@ function renderDrop(){
    静态托管的线上版一样能用，只要这台机器上跑着 8088。
    ============================================================ */
 let CM = { token:'', file:null, ready:false };
+const CM_STORE = 'saku_cm_token';          // 解锁后的 token 存这儿，下次不用再输
 
 function cmApi(path, opt){
   return fetch(DROP_BASE + path + (path.indexOf('?') >= 0 ? '&' : '?') + 't=' + encodeURIComponent(CM.token), opt);
 }
-function cmLog(html){
-  var el = $('cmLog'); if(!el) return;
-  el.innerHTML = html;
-}
+function cmLog(html){ var el = $('cmLog'); if(el) el.innerHTML = html; }
 function cmEsc(x){ return String(x == null ? '' : x).replace(/[&<>]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]; }); }
 
-async function initContentManage(){
+function initContentManage(){
   var card = $('cmCard'); if(!card) return;
-  card.style.display = 'block';
-  try{
-    var r = await fetch(DROP_BASE + '/admin/token', {cache:'no-store'});
-    var d = await r.json();
-    if(!d.ok) throw new Error(d.err || '没拿到口令');
-    CM.token = d.token; CM.ready = true;
-  }catch(e){
-    $('cmStat').innerHTML = '<span style="color:#e79b9b">内容管理不可用</span><br>'
-      + '<span style="font-size:12px">本机服务没跑起来，或者你不是从这台机器访问的。</span>';
-    return;
-  }
 
+  function showLock(msg){
+    $('cmLock').style.display = 'block';
+    $('cmBody').style.display = 'none';
+    if(msg) $('cmLockMsg').innerHTML = msg;
+  }
+  function showBody(){
+    $('cmLock').style.display = 'none';
+    $('cmBody').style.display = 'block';
+  }
+  window.__cmShowLock = showLock;
+  window.__cmShowBody = showBody;
+
+  var pw = $('cmPw');
+  async function tryUnlock(){
+    var v = (pw.value || '').trim();
+    if(!v){ $('cmLockMsg').innerHTML = '<span class="err">先输密码。</span>'; return; }
+    $('cmLockMsg').innerHTML = '<span class="mut">正在验证…</span>';
+    try{
+      var r = await fetch(DROP_BASE + '/admin/auth', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ password: v })
+      });
+      var d = await r.json();
+      if(!d.ok){ $('cmLockMsg').innerHTML = '<span class="err">' + cmEsc(d.err || '解锁失败') + '</span>'; sfx('bad'); return; }
+      CM.token = d.token; CM.ready = true;
+      try{ localStorage.setItem(CM_STORE, d.token); }catch(e){}
+      pw.value = '';
+      showBody(); sfx('good'); cmStatus(); bindCmActions();
+    }catch(e){
+      $('cmLockMsg').innerHTML = '<span class="err">连不上本机服务 —— ' + cmEsc(e.message) + '</span><br>'
+        + '<span class="mut">确认这台机器上跑着 8088。</span>';
+    }
+  }
+  $('cmUnlock').onclick = tryUnlock;
+  pw.addEventListener('keydown', function(ev){ if(ev.key === 'Enter') tryUnlock(); });
+  $('cmLockAgain').onclick = function(){
+    CM.token = ''; CM.ready = false;
+    try{ localStorage.removeItem(CM_STORE); }catch(e){}
+    sfx('click'); showLock('<span class="mut">已锁定。</span>');
+  };
+
+  // 上次解锁过就直接进
+  var saved = '';
+  try{ saved = localStorage.getItem(CM_STORE) || ''; }catch(e){}
+  if(saved){
+    CM.token = saved;
+    fetch(DROP_BASE + '/admin/status?t=' + encodeURIComponent(saved), {cache:'no-store'})
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(d){
+        if(d && d.ok){ CM.ready = true; showBody(); cmStatus(); bindCmActions(); }
+        else { try{ localStorage.removeItem(CM_STORE); }catch(e){} showLock(); }
+      })
+      .catch(function(){ CM.token = ''; showLock('<span class="mut">本机服务没跑起来。</span>'); });
+  }else{
+    showLock();
+  }
+}
+
+let cmBound = false;
+function bindCmActions(){
+  if(cmBound) return; cmBound = true;
   $('cmExport').onclick = function(){
     sfx('click');
     var a = document.createElement('a');
@@ -2910,8 +2983,6 @@ async function initContentManage(){
     $('cmSave').disabled = $('cmCheck').disabled = $('cmClear').disabled = true;
     sfx('click');
   };
-
-  cmStatus();
 }
 
 function cmTake(file){
