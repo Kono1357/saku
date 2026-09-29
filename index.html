@@ -447,7 +447,7 @@ function actx(){
   if(!ACTX){
     try{
       ACTX = new (window.AudioContext || window.webkitAudioContext)();
-      MASTER = ACTX.createGain(); MASTER.gain.value = 0.85; MASTER.connect(ACTX.destination);
+      MASTER = ACTX.createGain(); MASTER.gain.value = 0.72; MASTER.connect(ACTX.destination);
       // 程序生成的混响脉冲（衰减噪声），营造空间感
       const sr = ACTX.sampleRate, len = Math.floor(sr * 1.6);
       const imp = ACTX.createBuffer(2, len, sr);
@@ -526,8 +526,14 @@ function thump(freq, dur, vol, at){
 const SCALE = [0, 2, 4, 7, 9];          // 大调五声
 const nf = (semi, base) => (base || 523.25) * Math.pow(2, semi / 12);
 
+const SFX_LAST = {};
+const SFX_GAP = { openapp:260, closeapp:260, click:120, place:70, coin:90, advance:90, tick:40 };
 function sfx(name){
   if(!SFX_ON) return;
+  var now = performance.now();
+  var gap = SFX_GAP[name] || 0;
+  if(gap && SFX_LAST[name] && now - SFX_LAST[name] < gap) return;   // 连点不叠音
+  SFX_LAST[name] = now;
   actx();
   switch(name){
     /* —— 骰子：木质碰撞 + 滚动沙沙 —— */
@@ -544,9 +550,9 @@ function sfx(name){
       note({ f:330, to:240, dur:0.20, type:'triangle', vol:0.13, lp:1800, rev:0.55 });
       note({ f:660, to:520, dur:0.16, type:'sine', vol:0.07, at:0.02, rev:0.5 });
       break;
-    case 'place':                       // 放进房间：轻快双击
-      note({ f:nf(4,523.25), dur:0.10, type:'triangle', vol:0.11, rev:0.3 });
-      note({ f:nf(7,523.25), dur:0.16, type:'triangle', vol:0.09, at:0.055, rev:0.45 });
+    case 'place':                       // 放进房间：轻快双击（音量收敛）
+      note({ f:nf(4,440), dur:0.10, type:'sine', vol:0.07, lp:2200, rev:0.25 });
+      note({ f:nf(7,440), dur:0.15, type:'sine', vol:0.055, at:0.05, lp:2400, rev:0.35 });
       break;
     case 'discard':
       note({ f:260, to:140, dur:0.22, type:'sawtooth', vol:0.075, lp:1200, lpTo:400, rev:0.2 });
@@ -605,16 +611,23 @@ function sfx(name){
       noiseHit({ type:'highpass', f:3000, dur:0.05, vol:0.04, rev:0.3 });
       break;
     case 'click':
-      noiseHit({ type:'bandpass', f:2400, dur:0.02, vol:0.05, bq:5 });
+      noiseHit({ type:'lowpass', f:1400, dur:0.018, vol:0.028 });
+      note({ f:420 + Math.random() * 60, dur:0.05, type:'sine', vol:0.022, att:0.004, lp:1400 });
       break;
-    case 'openapp':
-      note({ f:nf(0,659.25), dur:0.24, type:'sine', vol:0.09, rev:0.6 });
-      note({ f:nf(7,659.25), dur:0.34, type:'sine', vol:0.06, at:0.06, rev:0.7 });
+    /* 打开/关闭 App：低频柔和的一声，每次音高略不同，不刺耳 */
+    case 'openapp': {
+      const v = 1 + (Math.random() - 0.5) * 0.06;
+      note({ f:294 * v, to:392 * v, dur:0.26, type:'sine', vol:0.055, att:0.016, lp:1200, rev:0.35 });
+      note({ f:588 * v, dur:0.18, type:'sine', vol:0.022, at:0.02, lp:1600, rev:0.3 });
+      noiseHit({ type:'lowpass', f:700, dur:0.05, vol:0.022 });
       break;
-    case 'closeapp':
-      note({ f:nf(7,659.25), dur:0.20, type:'sine', vol:0.07, rev:0.45 });
-      note({ f:nf(0,659.25), dur:0.26, type:'sine', vol:0.05, at:0.05, rev:0.5 });
+    }
+    case 'closeapp': {
+      const v = 1 + (Math.random() - 0.5) * 0.06;
+      note({ f:330 * v, to:247 * v, dur:0.24, type:'sine', vol:0.05, att:0.016, lp:1100, rev:0.3 });
+      noiseHit({ type:'lowpass', f:600, dur:0.045, vol:0.018 });
       break;
+    }
     /* —— 结局 —— */
     case 'win':
       [0, 4, 7, 12, 16, 19].forEach((semi, i) => {
