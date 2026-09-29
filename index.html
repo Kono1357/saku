@@ -274,6 +274,60 @@ ul.ditems .dt{flex:0 0 46px; font-size:12px; color:#9d8f68; font-variant-numeric
 ul.ditems .dx{flex:1; font-size:14.5px; color:#e2e9f5; line-height:1.85}
 .dfoot{font-size:14px; color:#cdd7e8; text-align:right; font-style:italic; letter-spacing:1px; opacity:.9}
 
+/* ---------- 界外记录板块 ---------- */
+function pickBySeed(arr, seed){ return arr[Math.abs(seed) % arr.length]; }
+function extraBlock(list){
+  if(!list || !list.length) return '';
+  var rows = list.map(function(r){
+    var t = OUTCOME_TEXT[r.outcome] || OUTCOME_TEXT.quit;
+    var txt = pickBySeed(t, (r.at || 0) % 997);
+    var icon = OUTCOME_ICON[r.outcome] || '…';
+    var cn = OUTCOME_CN[r.outcome] || '';
+    var detail = '第 ' + (r.turns||'?') + ' 回合 · 深渊 ' + (r.abyss != null ? r.abyss : '?') + '/12'
+      + (r.turnLimit ? '（上限 ' + r.turnLimit + '）' : '');
+    return '<li class="xr xr-' + (r.outcome||'quit') + '">'
+      + '<span class="xt">' + (r.time || '--:--') + '</span>'
+      + '<span class="xx">'
+        + '<b><i class="xi">' + icon + '</i>' + cn + '</b>'
+        + '<span class="xd">' + txt + '</span>'
+        + '<span class="xm">' + detail + '</span>'
+      + '</span></li>';
+  }).join('');
+  return '<div class="xblock">'
+    + '<div class="xh"><span class="xo">⚄</span>界外记录'
+    + '<span class="xnote">发生在梦里，不属于这一天的主线</span></div>'
+    + '<ul class="xlist">' + rows + '</ul></div>';
+}
+
+/* 界外记录 */
+.cal-cell .gdice{
+  position:absolute; top:4px; right:5px; font-size:10px; line-height:1;
+  color:#8a6d16; opacity:.95;
+}
+.xblock{
+  margin-top:16px; border:1.6px dashed rgba(168,128,31,.45); border-radius:13px;
+  background:linear-gradient(180deg,rgba(168,128,31,.09),rgba(168,128,31,.02));
+  padding:12px 13px 6px;
+}
+.xh{
+  display:flex; align-items:center; gap:7px; font-size:13px; letter-spacing:1.5px;
+  color:#c9a95e; margin-bottom:8px;
+}
+.xh .xo{font-size:15px}
+.xh .xnote{font-size:10.5px; color:var(--dim2); letter-spacing:0; margin-left:auto}
+ul.xlist{list-style:none; margin:0; padding:0}
+ul.xlist li{display:flex; gap:12px; padding:9px 0; border-top:1px solid rgba(201,169,94,.16)}
+ul.xlist li:first-child{border-top:none}
+ul.xlist .xt{flex:0 0 44px; font-size:12px; color:#9d8f68; font-variant-numeric:tabular-nums; padding-top:2px}
+ul.xlist .xx{flex:1; min-width:0; display:flex; flex-direction:column; gap:3px}
+ul.xlist .xx b{font-size:12.5px; color:#e0c884; font-weight:600; display:flex; align-items:center; gap:5px}
+ul.xlist .xi{font-style:normal; font-size:13px}
+ul.xlist .xd{font-size:14px; color:#dfe6f2; line-height:1.8}
+ul.xlist .xm{font-size:11px; color:var(--dim2); letter-spacing:.3px}
+ul.xlist .xr-lose .xx b{color:#c0706a}
+ul.xlist .xr-true .xx b{color:#c9b98f}
+ul.xlist .xr-quit .xx b{color:var(--dim)}
+
 /* ---------- 日历 ---------- */
 .cal-head{
   display:flex; align-items:center; gap:12px; margin-bottom:14px;
@@ -673,6 +727,111 @@ async function decryptJSON(password, enc){
   return JSON.parse(await decryptRaw(password, enc));
 }
 
+/* ============================================================
+   界外记录：桌游《一页迷宫》的结果桥
+   主线数据是只读的时间推算，桌游是玩家真玩出来的，
+   两者不同源，所以分开存、分开显示，绝不混进日记的时段抽取。
+   ============================================================ */
+const EXTRA_KEY = 'extraDays';
+const EXTRA_PER_DAY = 3;          // 每天最多留 3 条
+const EXTRA_KEEP_DAYS = 30;       // 最多保留 30 天
+
+/* 包装文案：把冷冰冰的战报说成"睡梦里的事" */
+const OUTCOME_TEXT = {
+  normal: [
+    '在睡梦里走过一道很长的长廊，尽头有光。醒过来的时候，枕头是干的。',
+    '梦见自己一直在往下走，走到最底下，看见了什么东西，然后天就亮了。',
+    '夜里做了个很长的梦，走完了整条路，最后站在那里，什么也没说。',
+  ],
+  true: [
+    '梦的尽头没有拿那把钥匙。就那样走过去了，带着一路上的东西。',
+    '梦见自己把钥匙留在了门口，然后推门进去，里面比想象中安静。',
+    '走到最后一步的时候，没有开锁。好像也不需要开。',
+  ],
+  lose: [
+    '迷迷糊糊间感到一阵心悸，像是被什么无形的东西击溃了。醒来时出了一身汗。',
+    '梦里走到一半就走不动了。就那么醒着躺了一会儿，才又睡过去。',
+    '做了个很累的梦，一直在被追。醒过来的时候手心攥得很紧。',
+  ],
+  quit: [
+    '半夜醒了一次，翻了个身，梦就断在那里了。',
+    '梦做到一半就散了，记不清后面是什么。',
+    '像是玩到一半被打断，纸还摊在桌上，人已经睡着了。',
+  ],
+};
+const OUTCOME_ICON = { normal:'⚄', true:'★', lose:'✖', quit:'…' };
+const OUTCOME_CN = { normal:'普通结局', true:'真结局', lose:'败北', quit:'未走完' };
+
+/* ---------- 安全读写 ---------- */
+function extraLoad(){
+  try{
+    var raw = localStorage.getItem(EXTRA_KEY);
+    if(!raw) return [];
+    var arr = JSON.parse(raw);
+    if(!Array.isArray(arr)) return [];
+    // 逐条校验，坏数据直接丢掉，绝不让它把页面搞崩
+    return arr.filter(function(r){
+      return r && typeof r === 'object'
+        && typeof r.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.date)
+        && OUTCOME_TEXT[r.outcome];
+    });
+  }catch(e){
+    try{ localStorage.removeItem(EXTRA_KEY); }catch(e2){}
+    return [];
+  }
+}
+function extraSave(arr){
+  try{
+    // 按日期裁剪 + 每天限量
+    var byDay = {};
+    arr.forEach(function(r){ (byDay[r.date] = byDay[r.date] || []).push(r); });
+    var days = Object.keys(byDay).sort().slice(-EXTRA_KEEP_DAYS);
+    var out = [];
+    days.forEach(function(d){
+      var list = byDay[d].sort(function(a,b){ return (a.at||0) - (b.at||0); });
+      out = out.concat(list.slice(-EXTRA_PER_DAY));
+    });
+    localStorage.setItem(EXTRA_KEY, JSON.stringify(out));
+  }catch(e){}
+}
+function extraMerge(records){
+  if(!records || !records.length) return 0;
+  var arr = extraLoad();
+  var have = {};
+  arr.forEach(function(r){ have[(r.date||'') + '|' + (r.at||0)] = 1; });
+  var add = 0;
+  records.forEach(function(r){
+    if(!r || typeof r !== 'object') return;
+    if(!r.date || !OUTCOME_TEXT[r.outcome]) return;
+    var k = r.date + '|' + (r.at || 0);
+    if(have[k]) return;            // 去重，补发时不会重复写
+    have[k] = 1; arr.push(r); add++;
+  });
+  if(add) extraSave(arr);
+  return add;
+}
+function extraByDate(date){
+  return extraLoad().filter(function(r){ return r.date === date; })
+    .sort(function(a,b){ return (a.at||0) - (b.at||0); });
+}
+
+/* ---------- 接收桌游的消息 ---------- */
+function bindBridge(){
+  window.addEventListener('message', function(ev){
+    var d = ev.data;
+    if(!d || typeof d !== 'object' || d.type !== 'maze_result') return;
+    // 只认自己那个 iframe 发来的
+    var frame = document.getElementById('gameFrame');
+    if(frame && ev.source && ev.source !== frame.contentWindow) return;
+    var added = extraMerge(d.payload);
+    if(added > 0){
+      sfx('coin');
+      if(VIEW === 'calendar') renderCalendar();
+      else if(VIEW === 'diary') renderDiary();
+    }
+  });
+}
+
 /* ---------- 朔在哪 ---------- */
 function placeAt(date){
   if(!PLAN || !PLACES) return null;
@@ -833,6 +992,8 @@ function renderDiary(){
     + '<div class="dfoot">' + pick(MOODS, seedOf(day.date, 'mood')) + '</div>'
     + '</div>';
 
+  html += extraBlock(extraByDate(DIARY_SEL));
+
   if(items.length > picked.length){
     html += '<div class="center" style="padding:14px 0">这一天还有 ' + (items.length - picked.length)
           + ' 条，去「日历」翻完整记录。</div>';
@@ -855,9 +1016,25 @@ function fmtDay(iso){
 }
 /* ---------- 日历 ---------- */
 let CAL_Y = null, CAL_M = null, CAL_SEL = null;
+/* 主线（只读）+ 界外记录（可写）合并。主线内容一个字节都不改。 */
 function dayMap(){
   var m = {};
-  if(DATA && DATA.days) DATA.days.forEach(function(d){ m[d.date] = d; });
+  if(DATA && DATA.days){
+    DATA.days.forEach(function(d){
+      m[d.date] = { date:d.date, weekday:d.weekday, items:d.items.slice(), extra:[] };
+    });
+  }
+  extraLoad().forEach(function(r){
+    if(!m[r.date]){
+      var dt = new Date(r.date + 'T12:00:00');
+      var wk = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'][dt.getDay()];
+      m[r.date] = { date:r.date, weekday:wk, items:[], extra:[] };
+    }
+    m[r.date].extra.push(r);
+  });
+  Object.keys(m).forEach(function(k){
+    m[k].extra.sort(function(a,b){ return (a.at||0) - (b.at||0); });
+  });
   return m;
 }
 function renderCalendar(keepSel){
@@ -886,7 +1063,8 @@ function renderCalendar(keepSel){
       var dots = '';
       for(var k = 0; k < Math.min(3, rec.items.length); k++) dots += '<i></i>';
       inner += '<span class="dots">' + dots + '</span>';
-      inner += '<span class="cnt">' + rec.items.length + ' 条</span>';
+      if(rec.items.length) inner += '<span class="cnt">' + rec.items.length + ' 条</span>';
+      if(rec.extra && rec.extra.length) inner += '<span class="gdice">⚄</span>';
     }
     cells += '<div class="' + cls + '" data-day="' + (rec ? key : '') + '">' + inner + '</div>';
   }
@@ -898,7 +1076,9 @@ function renderCalendar(keepSel){
       + (+CAL_SEL.slice(5,7)) + '月' + (+CAL_SEL.slice(8,10)) + '日</span>'
       + '<span class="w">' + r.weekday + '</span>'
       + '<span class="n">' + r.items.length + ' 条</span></div>'
-      + '<ul class="items" id="calList"></ul></div>';
+      + (r.items.length ? '<ul class="items" id="calList"></ul>' : '<div class="empty">这一天她没有留下记录。</div>')
+      + extraBlock(r.extra)
+      + '</div>';
   } else if(CAL_SEL){
     selHtml = '<div class="cal-day"><div class="empty">这一天她没有留下记录。</div></div>';
   } else {
@@ -916,7 +1096,7 @@ function renderCalendar(keepSel){
     + '<div class="cal-grid" id="calGrid">' + cells + '</div>'
     + selHtml;
 
-  if(CAL_SEL && map[CAL_SEL]){
+  if(CAL_SEL && map[CAL_SEL] && $('calList')){
     var ul = $('calList');
     map[CAL_SEL].items.forEach(function(it){ ul.appendChild(line(it.time, it.text)); });
   }
@@ -1182,6 +1362,8 @@ document.addEventListener('keydown', function(e){ if(e.key === 'Escape' && VIEW)
 
 /* 壁纸初始化 */
 applyWall();
+/* 桌游结果桥 */
+bindBridge();
 boot(IS_DEPLOY ? false : true);
 </script>
 </body>
