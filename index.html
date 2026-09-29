@@ -630,7 +630,11 @@ function extraBlock(list){
   if(!list || !list.length) return '';
   var rows = list.map(function(r){
     var isReb = (r.outcome === 'rebuild');
-    var t = isReb ? REBUILD_TEXT : (OUTCOME_TEXT[r.outcome] || OUTCOME_TEXT.quit);
+    var mood = r.mood || (currentMood() || {}).level || 'calm';
+    var byMood = isReb
+      ? (REBUILD_TEXT_MOOD[mood] || null)
+      : ((OUTCOME_TEXT_MOOD[mood] || {})[r.outcome] || null);
+    var t = byMood || (isReb ? REBUILD_TEXT : (OUTCOME_TEXT[r.outcome] || OUTCOME_TEXT.quit));
     var txt = pickBySeed(t, (r.at || 0) % 997);
     var icon = OUTCOME_ICON[r.outcome] || '…';
     var cn = OUTCOME_CN[r.outcome] || '';
@@ -1408,6 +1412,95 @@ const OUTCOME_TEXT = {
     '像是玩到一半被打断，纸还摊在桌上，人已经睡着了。',
   ],
 };
+/* 按朔当天的情绪改写的结局文案。
+   桌游发来的记录若带 mood 字段就用它，没有就用当前情绪，
+   两者都没有则回退到上面那套默认（平静语气）。 */
+const OUTCOME_TEXT_MOOD = {
+  collapse: {
+    normal: [
+      '她用力掷出骰子，砸在桌上的声音很响。深渊里的怪物倒下了，她感到一种隐秘的、暴力的快感。走到最后，她坐在那儿喘了一会儿。……真好啊，那就先这样吧。',
+      '骰子滚出去很远，撞到墙才停。她盯着那个点数，什么都没想。深渊到底了，她还活着。那就先这样吧。',
+      '她把骰子一颗一颗砸下去，像是砸在什么东西身上。赢了。可赢了也就那样。她躺下去，把被子拉到头顶。',
+    ],
+    true: [
+      '她攥着那把钥匙，攥得手心发疼，最后没有用它。就那么走过去了，走得很难看，但走过去了。……嗯，也行。',
+      '骰子被她砸得跳起来。她没有开那扇门。站在门口的时候，她忽然不想赢了，只想站一会儿。',
+      '她把钥匙留在原地，转身走了。走的时候脚步很重，但心里那块很沉的东西轻了一点。就这样吧。',
+    ],
+    lose: [
+      '她被击溃的时候没有出声。骰子还在桌上转，她的手指是麻的。输了，可她竟然觉得松了一口气。……算了。',
+      '最后一颗骰子停下的声音很清楚。她盯着它看了很久，然后伸手把桌上的东西全部扫到一边。就这样吧。',
+      '深渊把她吞了。她没有反抗，甚至有点想笑。醒来的时候枕头是湿的，她翻了个身，不打算想这件事。',
+    ],
+    quit: [
+      '她掷到一半就停了，手撑着桌子，没力气再掷。纸还摊着，人已经不动了。……不玩了。',
+      '骰子被她推到一边。她不想再看那些点数了。就这样断在这里吧。',
+      '她盯着深渊那一格看了很久，然后把灯关了。剩下的事情明天再说，如果明天还想得起。',
+    ],
+  },
+  irrit: {
+    normal: [
+      '她有点不耐烦地把骰子扔出去，懒得算那些点数。走完了，就那样。',
+      '骰子在桌上撞了两下停住。她扫了一眼，把该走的走完了。没什么感觉。',
+      '她一路走得很草率，能过就过。最后站在尽头，只想快点结束。',
+    ],
+    true: [
+      '她没拿那把钥匙。也不是想通了什么，就是觉得麻烦。走过去了，就这样。',
+      '骰子掷得乱七八糟，反而走到底了。她看着那扇门，没什么想推开的意思。',
+      '她把钥匙丢在一边，走了。懒得解释，也懒得回头。',
+    ],
+    lose: [
+      '输了。她把骰子推到桌子另一边，没再看。反正也没差。',
+      '骰子停在一个很难看的点上。她啧了一声，把纸折起来。今天到这儿。',
+      '她被拖下去的时候有点烦躁，像是被什么东西烦到了。醒了，翻个身继续睡。',
+    ],
+    quit: [
+      '她掷了两下就不想掷了。骰子扔在桌上，她躺下去看天花板。',
+      '算到一半她嫌烦，把笔放下。剩下那几格明天再说，或者说算了。',
+      '她看着还剩的回合数，觉得没意思。就这样吧，不玩了。',
+    ],
+  },
+  glow: {
+    normal: [
+      '她掷骰子的时候手是稳的，点数也顺。一路走到底，深渊比她想的浅。她轻轻舒了一口气。',
+      '骰子在桌上转了几圈，停下来是个好数。她把这条路走完了，走得挺顺。还行。',
+      '她走得不快，但每一步都踩得稳。到尽头的时候，她甚至有点舍不得结束。',
+    ],
+    true: [
+      '她握着那把钥匙，最后笑着把它放下了。不开了。走这一趟本身就够了。',
+      '骰子停得很漂亮。她在门口站了一会儿，把钥匙收进口袋，转身走了。这样挺好。',
+      '她没用钥匙。不是因为不敢，是因为忽然觉得，门后面是什么已经不重要了。',
+    ],
+    lose: [
+      '她输了，但输得不难看。骰子停在那儿，她看了两眼，耸耸肩。下次再来。',
+      '深渊把她留下了。她醒来的时候居然还有点遗憾，像是故事被提前合上了。',
+      '最后一颗骰子停得不好。她叹了口气，把手串转了半圈。没关系，还有明天。',
+    ],
+    quit: [
+      '她玩到一半，觉得差不多了，就把骰子收起来了。剩下的留着吧。',
+      '她停下来，看了一会儿桌上的点数，笑了笑。不玩了，今天这样刚刚好。',
+      '她把手串摘下来放在纸上，起身去倒水。回来的时候没再坐下。',
+    ],
+  },
+};
+/* 用了「构筑权」，且当时情绪不好的两种写法 */
+const REBUILD_TEXT_MOOD = {
+  collapse: [
+    '有一瞬间她不想认命。她伸手，把那条已经铺好的路硬生生掰弯了。掰得很难看，但弯了。',
+    '她用力把骰子砸下去，规则让了一下。她赢的不是游戏，是别的什么。',
+    '她不肯走那条路。她改了它。改完之后手还在抖，但她没有后悔。',
+  ],
+  irrit: [
+    '她嫌那条路烦，随手改了。命运让了一步，她连眼皮都没抬。',
+    '骰子被她拨到一边，重新摆。就这样，规矩是死的，她是活的。',
+    '她懒得走那条被安排好的路。改了。就这样。',
+  ],
+  glow: [
+    '她看着那条路，摇了摇头，轻轻把它换掉了。世界让了一步，她笑了一下。',
+    '她伸手把骰子重新摆了一遍，摆得很漂亮。这次是她自己选的路。',
+    '她觉得那样走不对，就改了。改完之后心里很轻。',
+  ],
+};
 /* 用了「构筑权」时的额外回响：她强行改写了命运 */
 const REBUILD_TEXT = [
   '今天她似乎用某种意志强行改变了命运的轨迹。',
@@ -1493,6 +1586,11 @@ function bindBridge(){
         });
       }
     });
+    /* 把"收到这条记录时的情绪"盖上去。
+       桌游若自己带了 mood 就尊重它；没带就用此刻的情绪——
+       记录刚发生，此刻的情绪基本就是当时那个。 */
+    var _nowMood = (currentMood() || {}).level || 'calm';
+    payload.forEach(function(r){ if(r && !r.mood) r.mood = _nowMood; });
     var added = extraMerge(payload);
     if(added > 0){
       sfx('coin');
@@ -2195,6 +2293,25 @@ function keyToday(){
 }
 
 /* ---------- 桌游 ---------- */
+/* 把朔当前的情绪推给桌游，让它改色调/音效/氛围。
+   桌游没收到也能正常跑（它会用默认外观），所以这里失败一律静默。 */
+function currentMood(){
+  try{
+    var e = (window.Saku && Saku.EMO) ? Saku.EMO() : null;
+    if(!e) return { level:'calm', v:0 };
+    var f = e.flags || {};
+    return { level: e.level || 'calm', v: (typeof e.v === 'number') ? e.v : 0,
+             period: !!f.period, sick: !!f.sick, sleepDebt: f.sleepDebt || 0 };
+  }catch(err){ return { level:'calm', v:0 }; }
+}
+function pushMoodToGame(){
+  try{
+    var frame = $('gameFrame');
+    if(!frame || !frame.contentWindow) return;
+    frame.contentWindow.postMessage({ type:'maze_mood', payload: currentMood() }, '*');
+  }catch(e){}
+}
+
 async function openGame(){
   var frame = $('gameFrame');
   if(!frame) return;
@@ -2202,6 +2319,8 @@ async function openGame(){
     if(!window.SAKU_MAZE_ENC) throw new Error('没有桌游数据');
     if(!window.__SAKU_PW) throw new Error('还没解锁');
     frame.srcdoc = await decryptRaw(window.__SAKU_PW, window.SAKU_MAZE_ENC);
+    setTimeout(pushMoodToGame, 350);
+    setTimeout(pushMoodToGame, 1400);
   }catch(e){
     frame.srcdoc = '<body style="background:#2e2822;color:#f3e9d6;font-family:serif;padding:40px;line-height:1.8">'
       + '桌游载入失败：' + e.message + '</body>';
@@ -2603,6 +2722,7 @@ async function boot(serverMode){
       setInterval(function(){
         try{
           if(!RAW || !window.Saku) return;
+          pushMoodToGame();
           var g2 = Saku.feed(WORLD_START, new Date(), RAW);
           DATA.days = g2.days; DATA.total = g2.total;
           if(VIEW === 'now' || VIEW === 'archive'){
@@ -2649,6 +2769,7 @@ async function boot(serverMode){
         window.__sakuTick = setInterval(function(){
           try{
             if(!RAW || !window.Saku) return;
+            pushMoodToGame();      // 情绪变了就立刻反映到桌游的色调与音效上
             var g2 = Saku.feed(WORLD_START, new Date(), RAW);
             DATA.days = g2.days; DATA.total = g2.total;
             DATA.emoByDay = (Saku.emoByDay ? Saku.emoByDay() : {}) || {};
