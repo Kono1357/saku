@@ -1111,6 +1111,7 @@ ul.xlist .xr-rebuild{background:linear-gradient(90deg,rgba(160,110,210,.10),tran
   <div class="view-body" id="viewBody"></div>
 </div>
 
+<script src="saku-data.enc.js"></script>
 <script src="saku-ascii.enc.js"></script>
 <script src="saku-engine.enc.js"></script>
 <script src="maze.enc.js"></script>
@@ -2621,11 +2622,7 @@ async function boot(serverMode){
     $('go').textContent = '解密中…';
     try{
       window.__SAKU_PW = password;
-      /* 内容文本统一来自仓库根目录的 saku_word.json（明文，可直接在 GitHub 上编辑） */
-      var d = await fetch('saku_word.json', {cache:'no-store'})
-                .then(function(r){ return r.ok ? r.json() : null; })
-                .catch(function(){ return null; });
-      if(!d) throw new Error('没读到 saku_word.json —— 确认它在仓库根目录');
+      var d = await decryptJSON(password, window.SAKU_ENC);
       if(window.SAKU_ASCII_ENC){
         try{
           var px = await decryptJSON(password, window.SAKU_ASCII_ENC);
