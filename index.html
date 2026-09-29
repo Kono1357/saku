@@ -679,6 +679,11 @@ ul.xlist .xt{flex:0 0 44px; font-size:12px; color:#9d8f68; font-variant-numeric:
 ul.xlist .xx{flex:1; min-width:0; display:flex; flex-direction:column; gap:3px}
 ul.xlist .xx b{font-size:12.5px; color:#e0c884; font-weight:600; display:flex; align-items:center; gap:5px}
 ul.xlist .xi{font-style:normal; font-size:13px}
+ul.xlist .xtag{
+  font-style:normal; font-size:11px; color:#d9b45a; letter-spacing:1px;
+  border:1px solid rgba(217,180,90,.5); border-radius:8px; padding:1px 7px;
+  margin-left:4px; background:rgba(217,180,90,.1); white-space:nowrap;
+}
 ul.xlist .xd{font-size:14px; color:#dfe6f2; line-height:1.8}
 ul.xlist .xm{font-size:11px; color:var(--dim2); letter-spacing:.3px}
 ul.xlist .xr-lose .xx b{color:#c0706a}
@@ -2292,14 +2297,18 @@ function extraBlock(list){
     var txt = pickBySeed(t, (r.at || 0) % 997);
     var icon = OUTCOME_ICON[r.outcome] || '…';
     var cn = OUTCOME_CN[r.outcome] || '';
+    /* v3：桌游现在会带称号（朔之证 / 永夜的朔 …），在这里挂一个小牌子 */
+    var tag = r.title ? '<i class="xtag">' + esc(r.title) + '</i>' : '';
+    var modeCn = (r.mode === 'hard' ? '困难' : (r.mode === 'standard' ? '标准' : ''));
     var detail = isReb
       ? '用了构筑权 · 她改了开局'
-      : ('第 ' + (r.turns||'?') + ' 回合 · 深渊 ' + (r.abyss != null ? r.abyss : '?') + '/12'
+      : ((modeCn ? modeCn + '模式 · ' : '') + '第 ' + (r.turns||'?') + ' 回合 · 深渊 '
+         + (r.abyss != null ? r.abyss : '?') + '/12'
          + (r.turnLimit ? '（上限 ' + r.turnLimit + '）' : ''));
     return '<li class="xr xr-' + (r.outcome||'quit') + '">'
       + '<span class="xt">' + (r.time || '--:--') + '</span>'
       + '<span class="xx">'
-        + '<b><i class="xi">' + icon + '</i>' + cn + '</b>'
+        + '<b><i class="xi">' + icon + '</i>' + cn + tag + '</b>'
         + '<span class="xd">' + txt + '</span>'
         + '<span class="xm">' + detail + '</span>'
       + '</span></li>';
@@ -2323,6 +2332,10 @@ function bindBridge(){
     // 只认自己那个 iframe 发来的
     var frame = document.getElementById('gameFrame');
     if(frame && ev.source && ev.source !== frame.contentWindow) return;
+    /* 桌游 v3 会同时发两条 maze_result：
+       · 数组形式 —— 每局的完整记录（日历/日记就靠它，带 title）
+       · 对象形式 —— §7.2 规定的汇总 {outcome,turns,abyssDepth,usedRebuild,keys,title}
+       两者内容重叠，只处理数组那条，否则同一次游戏会落两条记录。 */
     var payload = Array.isArray(d.payload) ? d.payload.slice() : [];
     // 用了构筑权的局，额外补一条「异世界回响」
     payload.forEach(function(r){
