@@ -567,31 +567,7 @@ function tlItems(items){
   return items.map(function(it, i){
     var h = parseInt(it.time.slice(0,2),10);
     var night = (h < 6 || h >= 22);
-    var priv = isPrivate(it.text);
-    return '<div class="tl' + (night ? ' tl-night' : '') + (priv ? ' tl-priv' : '') + '">'
-      + '<div class="tl-t">' + it.time + '</div>'
-      + '<div class="tl-dot"></div>'
-      + '<div class="tl-card">'
-        + (priv
-            ? '<div class="lockbar" data-unlock="' + i + '"><span class="lk">🔒</span>'
-              + '<span class="lkt">这一段她锁起来了</span><span class="lkh">点一下打开</span></div>'
-              + '<div class="locked-text" data-text="' + i + '">' + it.text + '</div>'
-            : it.text)
-      + '</div></div>';
-  }).join('');
-}
-function bindLocks(root){
-  if(!root) return;
-  root.querySelectorAll('.lockbar').forEach(function(b){
-    b.onclick = function(){
-      var i = b.dataset.unlock;
-      var t = root.querySelector('[data-text="' + i + '"]');
-      if(t){ t.classList.add('on'); b.classList.add('opened'); sfx('coin'); }
-      setTimeout(function(){ b.style.display = 'none'; }, 320);
-    };
-  });
-}
-function openDaySheet(key, rec){
+    function openDaySheet(key, rec){
   var el = sheetEl();
   var dt = new Date(key + 'T12:00:00');
   $('shD').textContent = (+key.slice(5,7)) + ' 月 ' + (+key.slice(8,10)) + ' 日';
@@ -608,7 +584,6 @@ function openDaySheet(key, rec){
   }
   if(rec && rec.extra && rec.extra.length) html += extraBlock(rec.extra);
   body.innerHTML = html;
-  bindLocks(body);
   (function(){
     var el = $('dmoon'); if(!el) return;
     var lv = 'calm', pd = false;
@@ -2268,17 +2243,12 @@ function tlItems(items){
   return items.map(function(it, i){
     var h = parseInt(it.time.slice(0,2),10);
     var night = (h < 6 || h >= 22);
-    var priv = isPrivate(it.text);
-    return '<div class="tl' + (night ? ' tl-night' : '') + (priv ? ' tl-priv' : '') + '">'
+    /* 不再给"私密"段落上锁 —— 直接写出来。
+       遮挡本身比内容更难看，而且点开还要输密码，体验很差。 */
+    return '<div class="tl' + (night ? ' tl-night' : '') + '">'
       + '<div class="tl-t">' + it.time + '</div>'
       + '<div class="tl-dot"></div>'
-      + '<div class="tl-card">'
-        + (priv
-            ? '<div class="lockbar" data-unlock="' + i + '"><span class="lk">🔒</span>'
-              + '<span class="lkt">这一段她锁起来了</span><span class="lkh">点一下打开</span></div>'
-              + '<div class="locked-text" data-text="' + i + '">' + it.text + '</div>'
-            : it.text)
-      + '</div></div>';
+      + '<div class="tl-card">' + it.text + '</div></div>';
   }).join('');
 }
 
@@ -2634,11 +2604,7 @@ function openDaySheet(key, rec){
           + '<div class="tl-t">' + it.time + '</div>'
           + '<div class="tl-dot"></div>'
           + '<div class="tl-card">'
-            + (kind === 'secret'
-                ? '<div class="lockbar" data-lk="' + i + '"><span class="lk">🔒</span>'
-                  + '<span class="lkt">这一段她锁起来了</span><span class="lkh">长按看</span></div>'
-                  + '<div class="ink" data-ink="' + i + '"><span class="ink-t">' + it.text + '</span></div>'
-                : it.text)
+            + it.text
           + '</div></div>';
       });
       html += '</div>';
@@ -2649,7 +2615,6 @@ function openDaySheet(key, rec){
 
     var body = $('sheetBody');
     body.innerHTML = html;
-    bindLocks(body);
     body.scrollTop = 0;
     el.classList.add('on');
     try{ sfx('openapp'); }catch(x){}
@@ -2660,49 +2625,6 @@ function openDaySheet(key, rec){
   }
 }
 
-/* ---------- 私密记录：长按 1.5 秒解锁 ---------- */
-function bindLocks(root){
-  if(!root) return;
-  root.querySelectorAll('.lockbar').forEach(function(bar){
-    var i = bar.dataset.lk;
-    var ink = root.querySelector('[data-ink="' + i + '"]');
-    var timer = null, prog = 0, raf = null;
-
-    function startHold(){
-      if(bar.classList.contains('opened')) return;
-      bar.classList.add('holding');
-      var t0 = Date.now();
-      var tick = function(){
-        prog = Math.min(1, (Date.now() - t0) / 1500);
-        bar.style.setProperty('--p', (prog * 100).toFixed(0) + '%');
-        if(prog >= 1){ done(); return; }
-        raf = requestAnimationFrame(tick);
-      };
-      raf = requestAnimationFrame(tick);
-    }
-    function cancelHold(){
-      if(raf) cancelAnimationFrame(raf);
-      raf = null;
-      if(!bar.classList.contains('opened')){
-        bar.classList.remove('holding');
-        bar.style.setProperty('--p', '0%');
-      }
-    }
-    function done(){
-      if(raf) cancelAnimationFrame(raf);
-      bar.classList.add('opened');
-      if(ink) ink.classList.add('on');
-      try{ sfx('coin'); }catch(e){}
-      setTimeout(function(){ bar.style.display = 'none'; }, 420);
-    }
-    bar.addEventListener('pointerdown', function(ev){ ev.preventDefault(); startHold(); });
-    bar.addEventListener('pointerup', cancelHold);
-    bar.addEventListener('pointerleave', cancelHold);
-    bar.addEventListener('pointercancel', cancelHold);
-    // 桌面端兜底：点一下也能开
-    bar.addEventListener('click', function(ev){ if(ev.detail === 0) done(); });
-  });
-}
 
 /* ============================================================
    日记：手帐本
@@ -2980,8 +2902,7 @@ function renderDiary(){
       + '<span class="dm-w">' + day.weekday + (lab.tag ? ' · ' + lab.tag : '') + '</span>'
       + '<span class="dm-wx">' + weather + '</span>'
       + '<span class="dm-moon">' + moon.g + '<i>' + moon.cn + '</i>'
-        + (hasSecret ? '<em class="dm-lock">🔒</em>' : '')
-        + (hasSecret ? '<em class="dm-redmark" id="dmRed"></em>' : '') + '</span>'
+        + '</span>'
     + '</div>'
     + '<div class="dtitle"><span class="dt-n">' + mo + '</span><span class="dt-u">月</span>'
       + '<span class="dt-n">' + dd + '</span><span class="dt-u">日</span></div>';
@@ -2993,27 +2914,6 @@ function renderDiary(){
     html += '<p class="dtp dtp-empty">这一天什么也没记下。</p>';
   }
   html += '</div>';
-
-  /* 私密的一天：整段正文默认被墨迹盖住，长按才散开 */
-  if(hasSecret){
-    // 密码就是这一天的数字：9 月 29 日 → 0929
-    var pw = day.date.slice(5,7) + day.date.slice(8,10);
-    html += '<div class="inkveil" id="inkVeil">'
-      + '<i class="inkblot"></i><i class="inkblot"></i><i class="inkblot"></i>'
-      + '<i class="inkblot"></i><i class="inkblot"></i>'
-      + '<div class="inkpad" id="inkPad">'
-        + '<div class="p-title">🔒 这一天锁着</div>'
-        + '<div class="p-sub">需要这一天的日期才能打开<br>（月 日，四位数字）</div>'
-        + '<div class="p-dots" id="pDots"><i></i><i></i><i></i><i></i></div>'
-        + '<div class="p-keys" id="pKeys">'
-          + [1,2,3,4,5,6,7,8,9].map(function(n){ return '<button data-k="' + n + '">' + n + '</button>'; }).join('')
-          + '<button class="wide" data-k="del">删除</button>'
-          + '<button data-k="0">0</button>'
-          + '<button class="wide" data-k="ok">打开</button>'
-        + '</div>'
-        + '<div class="p-err" id="pErr"></div>'
-      + '</div></div>';
-  }
 
   /* 她的随笔 */
   html += noteBlockHTML(day.date);
@@ -3135,69 +3035,8 @@ function renderDiary(){
       try{ sfx('click'); }catch(e){}
     };
   }
-  bindInkVeil();
 }
 
-/* 墨迹封层：输入这一天的日期（月日四位数字）才能打开 */
-function bindInkVeil(){
-  var veil = $('inkVeil'), paper = $('dpaper');
-  if(!veil || !paper) return;
-
-  // 密码就是当天日期：2026-09-29 → 0929
-  var pw = (DIARY_SEL || '').slice(5,7) + (DIARY_SEL || '').slice(8,10);
-  var typed = '';
-
-  var dots = veil.querySelectorAll('#pDots i');
-  var err  = veil.querySelector('#pErr');
-
-  // 已经解开过的这一天，直接就是开的
-  var opened = false;
-  try{ opened = sessionStorage.getItem('saku_ink_' + DIARY_SEL) === '1'; }catch(e){}
-  if(opened){ veil.style.display = 'none'; paper.classList.add('ink-open'); return; }
-
-  function paint(){
-    for(var i = 0; i < dots.length; i++) dots[i].classList.toggle('on', i < typed.length);
-  }
-  function unlock(){
-    veil.classList.add('gone');
-    paper.classList.add('ink-open');
-    try{ sessionStorage.setItem('saku_ink_' + DIARY_SEL, '1'); }catch(e){}
-    try{ sfx('relic'); }catch(e){}
-    setTimeout(function(){ veil.style.display = 'none'; }, 520);
-  }
-  function press(k){
-    if(err) err.textContent = '';
-    if(k === 'del'){ typed = typed.slice(0, -1); paint(); return; }
-    if(k === 'ok'){
-      if(typed === pw){ unlock(); }
-      else { typed = ''; paint(); if(err) err.textContent = '不对。'; try{ sfx('deny'); }catch(e){} }
-      return;
-    }
-    if(typed.length >= 4) return;
-    typed += k; paint();
-    try{ sfx('click'); }catch(e){}
-    if(typed.length === 4){
-      // 够了四位就自动判一次，省得再点"打开"
-      setTimeout(function(){
-        if(typed === pw) unlock();
-        else { typed = ''; paint(); if(err) err.textContent = '不对。再想想。'; try{ sfx('deny'); }catch(e){} }
-      }, 180);
-    }
-  }
-  var keys = veil.querySelector('#pKeys');
-  if(keys) keys.addEventListener('click', function(ev){
-    var btn = ev.target.closest('button');
-    if(!btn) return;
-    ev.stopPropagation();
-    press(btn.dataset.k);
-  });
-  // 点墨迹空白处不算数，别误触
-  veil.addEventListener('pointerdown', function(ev){
-    if(ev.target.closest('#inkPad')) return;
-    ev.preventDefault();
-  });
-  paint();
-}
 
 function bindDiaryBar(){
   var bar = $('diaryBar');
