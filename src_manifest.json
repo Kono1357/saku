@@ -28,6 +28,7 @@
  "standalone/saku-engine.js",
  "sync_from_online.py",
  "tests/README.md",
+ "tests/balance.js",
  "tests/fuzz.test.js",
  "tests/playthrough.test.js",
  "tests/rules.test.js",
