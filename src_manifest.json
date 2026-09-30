@@ -27,5 +27,9 @@
  "standalone/deploy/index.html",
  "standalone/saku-engine.js",
  "sync_from_online.py",
+ "tests/README.md",
+ "tests/fuzz.test.js",
+ "tests/playthrough.test.js",
+ "tests/rules.test.js",
  "upload.html"
 ]
