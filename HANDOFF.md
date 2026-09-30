@@ -113,6 +113,22 @@ cd pixel && python3 deploy_gh.py
 echo 'ghp_你的token' > ~/.ghtok && chmod 600 ~/.ghtok
 ```
 
+### 加密到底做了什么
+
+`pixel/encrypt_js.js` 把任意文件变成这样一行 JS：
+
+```js
+window.SAKU_XXX_ENC = {v:1, salt, iv, ct, tag};   // 全是 base64
+```
+
+算法：**PBKDF2-SHA256（250000 轮）→ AES-256-GCM**。
+密码默认 `Saku-Yueliang-2026-X7`，可用 `SAKU_PW` 环境变量覆盖。
+
+主页面在部署版里做的是反过来的一套：拿到 `SAKU_ENC` → 用用户输入的密码解密 →
+得到明文 JSON → 交给引擎。所以**密码错了就解不出来，仓库公开也读不到内容**。
+
+桌游那一份多一步：解密得到的是**整个 HTML 文件**，塞进 iframe 的 `srcdoc` 里运行。
+
 ### 部署后要等
 
 GitHub Pages 构建约 **5 分钟**。验证方法 —— 把线上文件拉下来解密，
@@ -130,6 +146,35 @@ const out=Buffer.concat([d.update(Buffer.from(o.ct,'base64')),d.final()]);
 console.log('一致:', out.equals(fs.readFileSync('game/maze.html')));
 "
 ```
+
+---
+
+## 本地调试（改桌游最快的方式，不用加密不用部署）
+
+**改桌游时不要每次都走"加密→上传→等 5 分钟"** —— 本地起了服务直接刷新就能看。
+
+```bash
+cd <项目根>
+python3 server.py &          # 监听 0.0.0.0:8088
+```
+
+然后手机上打开 **http://127.0.0.1:8088/**
+
+- **本地版不需要密码** —— 数据走明文 `/saku_word.json`（部署版才用加密数据）
+- 改 `game/maze.html` **直接刷新页面**就生效，不用加密、不用部署
+- 桌游在本地版是装在 iframe 里的 `/game/maze.html`，改完刷新即可
+
+一条命令验证整站是不是真的跑通了：
+
+```bash
+cd tests && node local.test.js      # 需要 server.py 正在跑
+```
+
+它会从 `8088` 真实加载整个站点，逐项验证：数据加载 → 日记渲染 →
+桌游 iframe 装载 → 开局构筑 → 进入正式牌局 → 资源栏 9 项 → 深渊轨道 13 格。
+
+**常见问题**：手机打不开 `127.0.0.1:8088` —— 那是"本地"的意思，指的是**跑服务的那台机器**。
+手机和服务器在同一个网络里时，要用服务器的局域网 IP（`ip addr` 查）。
 
 ---
 
