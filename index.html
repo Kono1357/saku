@@ -2322,7 +2322,15 @@ function extraByDate(date){
 function bindBridge(){
   window.addEventListener('message', function(ev){
     var d = ev.data;
-    if(!d || typeof d !== 'object' || d.type !== 'maze_result') return;
+    if(!d || typeof d !== 'object') return;
+    /* 桌游顶部那个「← 返回」按钮：它自己关不掉 iframe，发消息让主页面关视图 */
+    if(d.type === 'maze_close'){
+      var gf = document.getElementById('gameFrame');
+      if(gf && ev.source && ev.source !== gf.contentWindow) return;
+      closeView();
+      return;
+    }
+    if(d.type !== 'maze_result') return;
     // 只认自己那个 iframe 发来的
     var frame = document.getElementById('gameFrame');
     if(frame && ev.source && ev.source !== frame.contentWindow) return;
