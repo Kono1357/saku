@@ -33,6 +33,7 @@
  "tests/README.md",
  "tests/balance.js",
  "tests/fuzz.test.js",
+ "tests/local.test.js",
  "tests/playthrough.test.js",
  "tests/rules.test.js",
  "upload.html"
