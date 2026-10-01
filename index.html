@@ -235,6 +235,29 @@ ul.items li.night .x{color:#b9c5d8}
 .game-shell{position:absolute; inset:0; display:flex; flex-direction:column; z-index:1}
 .game-frame{flex:1; width:100%; border:0; background:#2e2822; display:block}
 
+/* ---------- 太空游戏的命令条 ----------
+   太空是键盘驱动的 roguelike：走和看能点，但交互与所有菜单绑在键上。
+   手机上没键盘，所以由外壳把按键注入 iframe。 */
+.cmdbar{
+  flex:0 0 auto; display:flex; flex-direction:column; gap:6px;
+  padding:7px 9px calc(7px + var(--safe-bot)); border-top:2px solid #3a4459;
+  background:linear-gradient(0deg,#141a2a,#0d1220);
+  max-height:36vh; overflow-y:auto;
+}
+.cmdbar .cmdrow{display:flex; gap:6px; flex-wrap:wrap; align-items:center}
+.cmdkey{
+  font-family:inherit; font-size:13px; padding:7px 12px; cursor:pointer;
+  border:1.5px solid #3a4459; border-radius:9px; background:#1b2338; color:var(--fg);
+  box-shadow:1.5px 1.5px 0 rgba(0,0,0,.45); white-space:nowrap;
+  -webkit-tap-highlight-color:transparent;
+}
+.cmdkey:active{transform:translateY(1px); box-shadow:none}
+.cmdkey.ok{border-color:var(--accent); color:#ffe08c; background:rgba(201,185,143,.16)}
+.cmdkey.more{margin-left:auto; border-style:dashed; color:var(--dim)}
+.cmdkey.flash{background:rgba(201,185,143,.4); border-color:var(--accent); color:#fff}
+.cmdwarn{font-size:11px; color:#e0908a; margin-left:8px}
+.cmdnote{font-size:11.5px; color:var(--dim2); padding:0 2px 2px}
+
 /* 返回按钮：足够显眼、可点、永远压在内容上面 */
 .view-bar{position:relative; z-index:20}
 .view-bar .back{
@@ -1798,6 +1821,7 @@ const WORLD_START = {
 
 const APPS = [
   {id:'game',    ico:'⚄', name:'桌游'},
+  {id:'space',   ico:'🚀', name:'太空'},
   {id:'diary',   ico:'✎', name:'日记'},
   {id:'drop',    ico:'📥', name:'投递箱'},
   {id:'wall',    ico:'▧', name:'壁纸'},
@@ -2422,10 +2446,98 @@ function showView(id, originEl){
     body.classList.add('short');
     openGame();
   }
+  else if(id === 'space'){
+    /* 太空游戏是一个自包含单文件，直接装进 iframe。
+       本地版读 /game/space.html；线上版暂时挂公开地址（命令条要等正式打包才生效）。 */
+    var ssrc = IS_DEPLOY
+      ? 'https://kono1357.github.io/space-game/space-text.html'
+      : '/game/space.html';
+    body.innerHTML = '<div class="game-shell">'
+      + '<iframe class="game-frame" id="spaceFrame" title="太空" src="' + ssrc + '"></iframe>'
+      + '<div class="cmdbar" id="spaceCmd"></div></div>';
+    body.classList.add('short');
+    renderSpaceCmd();
+  }
 
   $('home').classList.add('push');
   requestAnimationFrame(() => host.classList.add('on'));
 }
+/* ============================================================
+   太空游戏的命令条 —— 把按键注入 iframe
+   iframe 是同源的（本地版同域；线上版 srcdoc 会继承主页面 origin），
+   所以可以直接在它的 window 上派发 KeyboardEvent。
+   ============================================================ */
+const SPACE_CMD_MAIN = [
+  {k:'e',   t:'交互', cls:'ok'},
+  {k:'l',   t:'日志'},
+  {k:'m',   t:'任务'},
+  {k:'?',   t:'帮助'},
+  {k:'x',   t:'查看'},
+  {k:'Tab', t:'环顾'},
+  {k:'c',   t:'彩色'},
+];
+const SPACE_CMD_MORE = [
+  {k:'1', t:'1x'}, {k:'2', t:'2x'}, {k:'3', t:'4x'}, {k:'4', t:'8x'}, {k:'5', t:'暂停'},
+  {k:'+', t:'放大'}, {k:'-', t:'缩小'}, {k:'0', t:'复位'},
+  {k:'F2', t:'mod'}, {k:'F3', t:'诊断'}, {k:'F4', t:'信息'},
+  {k:'r', t:'重开'}, {k:'Escape', t:'关闭'},
+];
+let SPACE_MORE_OPEN = false, SPACE_KEY_OK = null;
+
+function spaceKey(k){
+  var f = document.getElementById('spaceFrame');
+  if(!f) return false;
+  var cw;
+  try{ cw = f.contentWindow; }catch(e){ return false; }   // 跨域时这里会被拦
+  if(!cw) return false;
+  try{
+    var KE = cw.KeyboardEvent || KeyboardEvent;
+    cw.dispatchEvent(new KE('keydown', {key:k, bubbles:true, cancelable:true}));
+    try{ f.focus(); }catch(e){}
+    return true;
+  }catch(e){ return false; }
+}
+
+function renderSpaceCmd(){
+  var bar = $('spaceCmd');
+  if(!bar) return;
+  var mk = function(list){
+    return list.map(function(c){
+      return '<button class="cmdkey ' + (c.cls||'') + '" data-k="' + c.k + '">' + c.t + '</button>';
+    }).join('');
+  };
+  var warn = (SPACE_KEY_OK === false)
+    ? '<span class="cmdwarn">命令条暂时不可用：线上版跨域注不进按键。'
+      + '画面仍可点着走／看，完整手机版等正式打包。</span>' : '';
+  bar.innerHTML =
+      '<div class="cmdrow">' + mk(SPACE_CMD_MAIN)
+    + '<button class="cmdkey more" data-more="1">' + (SPACE_MORE_OPEN ? '收起 ▴' : '更多 ▾') + '</button>'
+    + warn + '</div>'
+    + (SPACE_MORE_OPEN ? '<div class="cmdrow">' + mk(SPACE_CMD_MORE) + '</div>' : '')
+    + '<div class="cmdnote">画面可以直接点：点空格走过去，点走不到的东西看一眼。'
+    + '剩下的动作按上面的键。</div>';
+
+  Array.prototype.forEach.call(bar.querySelectorAll('button[data-k]'), function(b){
+    /* 别让按钮把焦点从 iframe 抢走 */
+    b.addEventListener('mousedown', function(ev){ ev.preventDefault(); });
+    b.addEventListener('touchstart', function(ev){ ev.preventDefault(); b.click(); }, {passive:false});
+    b.addEventListener('click', function(){
+      var ok = spaceKey(b.getAttribute('data-k'));
+      if(SPACE_KEY_OK !== ok){ SPACE_KEY_OK = ok; renderSpaceCmd(); }
+      if(ok){ sfx('click'); b.classList.add('flash');
+              setTimeout(function(){ b.classList.remove('flash'); }, 160); }
+      else sfx('deny');
+    });
+  });
+  var m = bar.querySelector('button[data-more]');
+  if(m){
+    m.addEventListener('mousedown', function(ev){ ev.preventDefault(); });
+    m.addEventListener('click', function(){
+      SPACE_MORE_OPEN = !SPACE_MORE_OPEN; sfx('click'); renderSpaceCmd();
+    });
+  }
+}
+
 function closeView(){
   if(VIEW === 'dev' && SANDBOX) setSandbox(false);
   sfx('closeapp');
