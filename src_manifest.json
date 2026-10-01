@@ -16,6 +16,7 @@
  "engine/saku-engine.js",
  "ensure.sh",
  "game/maze.html",
+ "game/space.html",
  "index.html",
  "pixel/boot.js",
  "pixel/build_src.py",
@@ -36,5 +37,6 @@
  "tests/local.test.js",
  "tests/playthrough.test.js",
  "tests/rules.test.js",
+ "tests/space.test.js",
  "upload.html"
 ]
