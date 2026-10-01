@@ -236,27 +236,51 @@ ul.items li.night .x{color:#b9c5d8}
 .game-frame{flex:1; width:100%; border:0; background:#2e2822; display:block}
 
 /* ---------- 太空游戏的命令条 ----------
-   太空是键盘驱动的 roguelike：走和看能点，但交互与所有菜单绑在键上。
-   手机上没键盘，所以由外壳把按键注入 iframe。 */
+   太空是键盘驱动的 roguelike：走和看能点，但交互、选项选择、菜单全绑在键上。
+   手机上没键盘 —— 所以这里给一套十字键 + 动作键，由外壳注入按键。 */
 .cmdbar{
-  flex:0 0 auto; display:flex; flex-direction:column; gap:6px;
+  flex:0 0 auto; display:flex; flex-direction:column; gap:7px;
   padding:7px 9px calc(7px + var(--safe-bot)); border-top:2px solid #3a4459;
   background:linear-gradient(0deg,#141a2a,#0d1220);
-  max-height:36vh; overflow-y:auto;
+  max-height:46vh; overflow-y:auto;
 }
+.cmdbar.folded{ padding:5px 9px calc(5px + var(--safe-bot)) }
 .cmdbar .cmdrow{display:flex; gap:6px; flex-wrap:wrap; align-items:center}
+
+/* 字号条（常驻在最上面） */
+.cmdzoom{display:flex; gap:6px; align-items:center; font-size:11.5px; color:var(--dim2)}
+.cmdzoom .zv{min-width:44px; text-align:center; color:var(--accent); font-size:12.5px; font-weight:700}
+.cmdzoom .fold{margin-left:auto}
+
+/* 十字键 */
+.dpad{
+  flex:0 0 auto; display:grid; gap:4px;
+  grid-template-columns:repeat(3,42px); grid-template-rows:repeat(3,42px);
+}
+.dpad button{
+  font-family:inherit; font-size:17px; line-height:1; cursor:pointer;
+  border:1.5px solid #3a4459; border-radius:10px; background:#1b2338; color:var(--fg);
+  box-shadow:1.5px 1.5px 0 rgba(0,0,0,.45); padding:0;
+  -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+}
+.dpad button:active{transform:translateY(1px); box-shadow:none; background:#2a3550}
+.dpad .mid{ border-color:var(--accent); color:#ffe08c; background:rgba(201,185,143,.16); font-size:13px }
+.dpad .sp{ visibility:hidden }
+
+/* 动作键 */
+.cmdacts{flex:1 1 auto; display:flex; flex-direction:column; gap:6px; min-width:150px}
 .cmdkey{
-  font-family:inherit; font-size:13px; padding:7px 12px; cursor:pointer;
+  font-family:inherit; font-size:13px; padding:9px 11px; cursor:pointer;
   border:1.5px solid #3a4459; border-radius:9px; background:#1b2338; color:var(--fg);
-  box-shadow:1.5px 1.5px 0 rgba(0,0,0,.45); white-space:nowrap;
-  -webkit-tap-highlight-color:transparent;
+  box-shadow:1.5px 1.5px 0 rgba(0,0,0,.45); white-space:nowrap; flex:1 1 auto;
+  -webkit-tap-highlight-color:transparent; touch-action:manipulation;
 }
 .cmdkey:active{transform:translateY(1px); box-shadow:none}
 .cmdkey.ok{border-color:var(--accent); color:#ffe08c; background:rgba(201,185,143,.16)}
-.cmdkey.more{margin-left:auto; border-style:dashed; color:var(--dim)}
+.cmdkey.more{border-style:dashed; color:var(--dim)}
 .cmdkey.flash{background:rgba(201,185,143,.4); border-color:var(--accent); color:#fff}
-.cmdwarn{font-size:11px; color:#e0908a; margin-left:8px}
-.cmdnote{font-size:11.5px; color:var(--dim2); padding:0 2px 2px}
+.cmdwarn{font-size:11px; color:#e0908a; flex-basis:100%}
+.cmdnote{font-size:11px; color:var(--dim2); line-height:1.5}
 
 /* 返回按钮：足够显眼、可点、永远压在内容上面 */
 .view-bar{position:relative; z-index:20}
@@ -2452,6 +2476,19 @@ function showView(id, originEl){
     var ssrc = IS_DEPLOY
       ? 'https://kono1357.github.io/space-game/space-text.html'
       : '/game/space.html';
+    /* 手机默认只算出 9px 字号，太瞎眼 —— 第一次打开就给个适合手机的起手值。
+       用户自己调过之后（localStorage 里已有）就不再覆盖。 */
+    if(!IS_DEPLOY){
+      try{
+        if(localStorage.getItem('space_zoom') === null){
+          localStorage.setItem('space_zoom', String(SPACE_ZOOM_DEFAULT));
+        }
+      }catch(e){}
+    }
+    SPACE_FOLDED = false;
+    SPACE_MORE_OPEN = false;
+    SPACE_KEY_OK = null;
+    SPACE_ZOOM = null;
     body.innerHTML = '<div class="game-shell">'
       + '<iframe class="game-frame" id="spaceFrame" title="太空" src="' + ssrc + '"></iframe>'
       + '<div class="cmdbar" id="spaceCmd"></div></div>';
@@ -2469,20 +2506,40 @@ function showView(id, originEl){
    ============================================================ */
 const SPACE_CMD_MAIN = [
   {k:'e',   t:'交互', cls:'ok'},
+  {k:'Enter', t:'确认'},
   {k:'l',   t:'日志'},
   {k:'m',   t:'任务'},
   {k:'?',   t:'帮助'},
-  {k:'x',   t:'查看'},
-  {k:'Tab', t:'环顾'},
-  {k:'c',   t:'彩色'},
 ];
 const SPACE_CMD_MORE = [
+  {k:'Tab', t:'环顾'}, {k:'x', t:'查看'}, {k:'c', t:'彩色'},
   {k:'1', t:'1x'}, {k:'2', t:'2x'}, {k:'3', t:'4x'}, {k:'4', t:'8x'}, {k:'5', t:'暂停'},
-  {k:'+', t:'放大'}, {k:'-', t:'缩小'}, {k:'0', t:'复位'},
   {k:'F2', t:'mod'}, {k:'F3', t:'诊断'}, {k:'F4', t:'信息'},
   {k:'r', t:'重开'}, {k:'Escape', t:'关闭'},
 ];
-let SPACE_MORE_OPEN = false, SPACE_KEY_OK = null;
+let SPACE_MORE_OPEN = false, SPACE_FOLDED = false, SPACE_KEY_OK = null, SPACE_ZOOM = null;
+
+/* 字号：游戏把 zoomBias 存在 localStorage.space_zoom，每 +1 就是字号 +1px。
+   手机上默认算出来只有 9px，太小 —— 这里给一个适合手机的起手值。 */
+const SPACE_ZOOM_DEFAULT = 6;      // 360px 屏 → 15px 字号，画面仍有 40x44 格
+function spaceZoomGet(){
+  try{
+    var v = localStorage.getItem('space_zoom');
+    return v === null ? SPACE_ZOOM_DEFAULT : Number(v);
+  }catch(e){ return SPACE_ZOOM_DEFAULT; }
+}
+function spaceZoomSet(v){
+  v = Math.max(-6, Math.min(16, v));
+  try{ localStorage.setItem('space_zoom', String(v)); }catch(e){}
+  SPACE_ZOOM = v;
+  /* 直接按 + / - 让游戏自己重算，比改完 localStorage 再刷新可靠 */
+  var cur = spaceZoomGet();
+  if(v !== cur){
+    var delta = v - cur;
+    for(var i = 0; i < Math.abs(delta); i++) spaceKey(delta > 0 ? '+' : '-');
+  }
+  renderSpaceCmd();
+}
 
 function spaceKey(k){
   var f = document.getElementById('spaceFrame');
@@ -2497,45 +2554,79 @@ function spaceKey(k){
     return true;
   }catch(e){ return false; }
 }
+function bindCmdBtn(el, fn){
+  el.addEventListener('mousedown', function(ev){ ev.preventDefault(); });
+  el.addEventListener('touchstart', function(ev){ ev.preventDefault(); fn(); }, {passive:false});
+  el.addEventListener('click', function(ev){ if(ev.detail !== 0) return; fn(); });
+}
+function pressKey(b){
+  var ok = spaceKey(b.getAttribute('data-k'));
+  if(SPACE_KEY_OK !== ok){ SPACE_KEY_OK = ok; renderSpaceCmd(); }
+  if(ok){ sfx('click'); b.classList.add('flash');
+          setTimeout(function(){ b.classList.remove('flash'); }, 160); }
+  else sfx('deny');
+}
 
 function renderSpaceCmd(){
   var bar = $('spaceCmd');
   if(!bar) return;
+  if(SPACE_FOLDED){
+    bar.className = 'cmdbar folded';
+    bar.innerHTML = '<div class="cmdrow"><button class="cmdkey more" data-fold="1">⌨ 展开操作键</button>'
+      + '<span class="cmdnote">画面可以直接点：点空格走过去，点走不到的东西看一眼。</span></div>';
+    bindFold(bar);
+    return;
+  }
+  bar.className = 'cmdbar';
   var mk = function(list){
     return list.map(function(c){
       return '<button class="cmdkey ' + (c.cls||'') + '" data-k="' + c.k + '">' + c.t + '</button>';
     }).join('');
   };
-  var warn = (SPACE_KEY_OK === false)
-    ? '<span class="cmdwarn">命令条暂时不可用：线上版跨域注不进按键。'
-      + '画面仍可点着走／看，完整手机版等正式打包。</span>' : '';
+  if(SPACE_ZOOM === null) SPACE_ZOOM = spaceZoomGet();
+
   bar.innerHTML =
-      '<div class="cmdrow">' + mk(SPACE_CMD_MAIN)
-    + '<button class="cmdkey more" data-more="1">' + (SPACE_MORE_OPEN ? '收起 ▴' : '更多 ▾') + '</button>'
-    + warn + '</div>'
-    + (SPACE_MORE_OPEN ? '<div class="cmdrow">' + mk(SPACE_CMD_MORE) + '</div>' : '')
-    + '<div class="cmdnote">画面可以直接点：点空格走过去，点走不到的东西看一眼。'
-    + '剩下的动作按上面的键。</div>';
+      '<div class="cmdzoom">'
+    +   '<span>字号</span>'
+    +   '<button class="cmdkey" data-zoom="-1">−</button>'
+    +   '<span class="zv">' + SPACE_ZOOM + '</span>'
+    +   '<button class="cmdkey" data-zoom="1">＋</button>'
+    +   '<button class="cmdkey" data-zoom="reset">复位</button>'
+    +   '<button class="cmdkey more fold" data-fold="1">收起 ▾</button>'
+    + '</div>'
+    + '<div class="cmdrow">'
+    +   '<div class="dpad">'
+    +     '<button class="sp"></button><button data-k="ArrowUp">↑</button><button class="sp"></button>'
+    +     '<button data-k="ArrowLeft">←</button><button class="mid" data-k="Enter">确认</button><button data-k="ArrowRight">→</button>'
+    +     '<button class="sp"></button><button data-k="ArrowDown">↓</button><button class="sp"></button>'
+    +   '</div>'
+    +   '<div class="cmdacts">'
+    +     '<div class="cmdrow">' + mk(SPACE_CMD_MAIN) + '</div>'
+    +     '<div class="cmdrow">' + mk(SPACE_CMD_MORE.slice(0, SPACE_MORE_OPEN ? 99 : 0))
+    +       '<button class="cmdkey more" data-more="1">' + (SPACE_MORE_OPEN ? '收起 ▴' : '更多 ▾') + '</button></div>'
+    +     ((SPACE_KEY_OK === false) ? '<div class="cmdwarn">命令条暂时不可用：线上版跨域注不进按键。'
+    +       '画面仍可点着走／看，完整手机版等正式打包。</div>' : '')
+    +   '</div>'
+    + '</div>'
+    + (SPACE_MORE_OPEN ? '<div class="cmdnote">十字键在地图里是走路，在对话／菜单里是上下选择，确认键就是回车。</div>' : '');
 
   Array.prototype.forEach.call(bar.querySelectorAll('button[data-k]'), function(b){
-    /* 别让按钮把焦点从 iframe 抢走 */
-    b.addEventListener('mousedown', function(ev){ ev.preventDefault(); });
-    b.addEventListener('touchstart', function(ev){ ev.preventDefault(); b.click(); }, {passive:false});
-    b.addEventListener('click', function(){
-      var ok = spaceKey(b.getAttribute('data-k'));
-      if(SPACE_KEY_OK !== ok){ SPACE_KEY_OK = ok; renderSpaceCmd(); }
-      if(ok){ sfx('click'); b.classList.add('flash');
-              setTimeout(function(){ b.classList.remove('flash'); }, 160); }
-      else sfx('deny');
-    });
+    bindCmdBtn(b, function(){ pressKey(b); });
   });
   var m = bar.querySelector('button[data-more]');
-  if(m){
-    m.addEventListener('mousedown', function(ev){ ev.preventDefault(); });
-    m.addEventListener('click', function(){
-      SPACE_MORE_OPEN = !SPACE_MORE_OPEN; sfx('click'); renderSpaceCmd();
+  if(m) bindCmdBtn(m, function(){ SPACE_MORE_OPEN = !SPACE_MORE_OPEN; sfx('click'); renderSpaceCmd(); });
+  Array.prototype.forEach.call(bar.querySelectorAll('button[data-zoom]'), function(b){
+    bindCmdBtn(b, function(){
+      var d = b.getAttribute('data-zoom');
+      spaceZoomSet(d === 'reset' ? SPACE_ZOOM_DEFAULT : spaceZoomGet() + Number(d));
+      sfx('click');
     });
-  }
+  });
+  bindFold(bar);
+}
+function bindFold(bar){
+  var f = bar.querySelector('button[data-fold]');
+  if(f) bindCmdBtn(f, function(){ SPACE_FOLDED = !SPACE_FOLDED; sfx('click'); renderSpaceCmd(); });
 }
 
 function closeView(){
