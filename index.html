@@ -2031,7 +2031,7 @@ body{ height:var(--vh) }
    ===================================================================== */
 const $ = id => document.getElementById(id);
 const IS_DEPLOY = true;
-const APP_BUILD = '10-02 05:31·e5d9eb';     // 构建时替换成时间戳；直接开模板时保持占位符 = 不自检
+const APP_BUILD = '10-02 05:58·9215b8';     // 构建时替换成时间戳；直接开模板时保持占位符 = 不自检
 const STORE_KEY = 'saku_pw';
 const WORLD_START = {
   date:  new Date(2026, 8, 19, 0, 0, 0),
@@ -4499,7 +4499,8 @@ function initContentManage(){
       showBody(); sfx('good'); cmStatus(); bindCmActions();
     }catch(e){
       $('cmLockMsg').innerHTML = '<span class="err">连不上本机服务 —— ' + cmEsc(e.message) + '</span><br>'
-        + '<span class="mut">确认这台机器上跑着 8088。</span>';
+        + '<span class="mut">投递失败通常是两件事：① 容器里的 8088 没在跑（直接回对话说一句「开服务」，我立刻拉起来）；'
+        + '② 浏览器把「公网页面访问本机」拦了 —— 用 http://127.0.0.1:8088/ 这个地址打开本站就不会被拦。</span>';
     }
   }
   $('cmUnlock').onclick = tryUnlock;
