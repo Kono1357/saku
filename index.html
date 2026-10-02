@@ -249,14 +249,16 @@ ul.items li.night .x{color:#b9c5d8}
    容器 pointer-events:none：控件之间的缝是给地图的，不挡点按。
    ============================================================ */
 .game-shell.space{
-  --sg-top:0px;  --sg-top:env(safe-area-inset-top,0px);
-  --sg-bot:40px; --sg-bot:max(40px, calc(env(safe-area-inset-bottom,0px) + 18px));
-  --sg-stick:clamp(124px, 40vw, 156px);   /* 摇杆直径，拇指滑动行程 */
-  --sg-ok:clamp(74px, 24vw, 92px);        /* 确认键直径 */
-  --sg-act:clamp(64px, 21vw, 80px);       /* 交互键直径 */
-  --sg-hud:35px;                          /* 运行时按游戏实际行高改写（= 2 行） */
+  /* 尺寸的**唯一真源**在 JS（SG_SIZE + sgLayout）：手机浏览器对 clamp()/env() 的支持参差，
+     靠 CSS 自己算尺寸，一旦有一条不认，width 就变成 auto —— 圆形大键当场塌成小方块。
+     这里只放纯 px 兜底，JS 一来就覆盖。
+       hit  = 摇杆的**热区**（透明，比看得见的圆大一圈，拇指怎么拖都不会滑出）
+       ring = 摇杆**画出来**的圆（小一号 —— 满屏 ASCII 网格，少盖一块是一块） */
+  --sg-top:0px;
+  --sg-bot:40px;
+  --sg-hit:130px; --sg-ring:104px; --sg-ok:76px; --sg-act:67px; --sg-hud:35px;
   --sg-cyan:#3fd8ff; --sg-orange:#ff9a3c;
-  --sg-glass:rgba(9,13,22,.9); --sg-line:rgba(120,190,255,.18);
+  --sg-line:rgba(120,190,255,.22);
 }
 /* 画面整体下移到安全区之下；信息条再盖住游戏自己的前两行 */
 .game-shell.space .game-frame{position:absolute; left:0; right:0; top:var(--sg-top); bottom:0}
@@ -399,76 +401,93 @@ ul.items li.night .x{color:#b9c5d8}
   color:#ffd9dc; background:rgba(40,12,16,.9); border-left:2px solid #ff6b7a;
 }
 
-/* ---------- ④ 左下角：虚拟摇杆（按住可滑、松手即停） ---------- */
+/* ---------- ④ 左下角：虚拟摇杆 ----------
+   关键改动：**热区大、画得小**。
+   原来热区=画出来的圆=144px，等于在满屏地图的左下角糊了一块大饼。
+   现在外层 .sg-stick 是透明的热区（130px，拇指怎么拖都不会滑出去），
+   里层 .sg-ring 才是看得见的圆（104px），少了近一半遮挡面积。
+   再加上「静止 2.6 秒 → 整组淡到 42%」（.timid），不用手的时候地图是全亮的。 */
 .sg-stick{
-  position:absolute; left:16px; bottom:var(--sg-bot);
-  width:var(--sg-stick); height:var(--sg-stick); border-radius:50%;
-  pointer-events:auto; touch-action:none;
-  background:
-    radial-gradient(circle at 50% 50%, rgba(63,216,255,.09), rgba(63,216,255,0) 64%),
-    radial-gradient(circle at 50% 26%, rgba(255,255,255,.055), rgba(0,0,0,0) 72%),
-    rgba(9,13,22,.66);
-  border:1px solid var(--sg-line);
-  backdrop-filter:blur(10px) saturate(130%); -webkit-backdrop-filter:blur(10px) saturate(130%);
-  box-shadow:inset 0 0 26px -8px rgba(63,216,255,.3), 0 10px 26px -14px #000;
-  transition:border-color .16s, box-shadow .16s;
+  position:absolute; left:8px; bottom:calc(var(--sg-bot) - 8px);
+  width:var(--sg-hit); height:var(--sg-hit); border-radius:50%;
+  pointer-events:auto; touch-action:none; background:none; border:0; padding:0;
+  display:flex; align-items:center; justify-content:center;
+  transition:opacity .3s;
 }
-.sg-stick.on{
-  border-color:rgba(63,216,255,.5);
-  box-shadow:inset 0 0 30px -6px rgba(63,216,255,.42), 0 0 24px -8px rgba(63,216,255,.55);
+.sg-ring{
+  position:relative; width:var(--sg-ring); height:var(--sg-ring); border-radius:50%;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(63,216,255,.07), rgba(63,216,255,0) 66%),
+    rgba(9,13,22,.34);
+  border:1px solid var(--sg-line);
+  box-shadow:inset 0 0 20px -10px rgba(63,216,255,.5);
+  transition:background .18s, border-color .18s, box-shadow .18s;
+}
+.sg-stick.on .sg-ring{
+  background:radial-gradient(circle at 50% 50%, rgba(63,216,255,.12), rgba(63,216,255,0) 66%), rgba(9,13,22,.5);
+  border-color:rgba(63,216,255,.55);
+  box-shadow:inset 0 0 24px -8px rgba(63,216,255,.5), 0 0 18px -8px rgba(63,216,255,.5);
 }
 .sg-stick .chev{
-  position:absolute; width:36px; height:36px; border-radius:11px;
+  position:absolute; width:30px; height:30px; border-radius:9px;
   display:flex; align-items:center; justify-content:center;
-  font-size:13px; color:#7d93ad; background:rgba(255,255,255,.045);
-  border:1px solid rgba(120,190,255,.14);
+  font-size:12px; color:#7d93ad; background:rgba(255,255,255,.05);
+  border:1px solid rgba(120,190,255,.16);
   transition:background .1s, color .1s, box-shadow .1s;
 }
-.sg-stick .chev.u{left:50%; top:5px;    transform:translateX(-50%)}
-.sg-stick .chev.d{left:50%; bottom:5px; transform:translateX(-50%)}
-.sg-stick .chev.l{left:5px;  top:50%;    transform:translateY(-50%)}
-.sg-stick .chev.r{right:5px; top:50%;    transform:translateY(-50%)}
+.sg-stick .chev.u{left:50%; top:3px;    transform:translateX(-50%)}
+.sg-stick .chev.d{left:50%; bottom:3px; transform:translateX(-50%)}
+.sg-stick .chev.l{left:3px;  top:50%;    transform:translateY(-50%)}
+.sg-stick .chev.r{right:3px; top:50%;    transform:translateY(-50%)}
 .sg-stick .chev.lit{
   color:#04121a; background:var(--sg-cyan); border-color:var(--sg-cyan);
-  box-shadow:0 0 16px -2px rgba(63,216,255,.75);
+  box-shadow:0 0 14px -2px rgba(63,216,255,.75);
 }
 .sg-stick .knob{
   position:absolute; left:50%; top:50%; width:34%; height:34%; border-radius:50%;
   transform:translate(-50%,-50%) translate(var(--kx,0px), var(--ky,0px));
   display:flex; align-items:center; justify-content:center;
-  background:radial-gradient(circle at 38% 32%, #2c3c56, #121a28 72%);
-  border:1px solid rgba(160,200,255,.3); color:#8fb4d8; font-size:12px;
+  background:radial-gradient(circle at 38% 32%, rgba(44,60,86,.9), rgba(18,26,40,.9) 72%);
+  border:1px solid rgba(160,200,255,.32); color:#9dc0e2; font-size:12px;
   box-shadow:0 4px 12px -6px #000, inset 0 1px 0 rgba(255,255,255,.09);
 }
 .sg-stick.on .knob{border-color:rgba(63,216,255,.7); color:#dff6ff}
 
 /* ---------- ④ 右下角：确认 / 交互（两个核心大键） ---------- */
 .sg-acts{
-  position:absolute; right:16px; bottom:var(--sg-bot);
-  display:flex; flex-direction:column; align-items:flex-end; gap:10px; pointer-events:none;
+  position:absolute; right:8px; bottom:var(--sg-bot);
+  display:flex; flex-direction:column; align-items:flex-end; gap:9px; pointer-events:none;
+  transition:opacity .3s;
 }
 .sg-a{
   pointer-events:auto; border-radius:50%; padding:0; cursor:pointer;
   display:flex; align-items:center; justify-content:center;
   font-family:inherit; font-weight:700; letter-spacing:1px;
   -webkit-tap-highlight-color:transparent; touch-action:manipulation;
-  backdrop-filter:blur(10px) saturate(130%); -webkit-backdrop-filter:blur(10px) saturate(130%);
-  transition:transform .1s, filter .1s;
+  transition:transform .1s, filter .1s, box-shadow .18s, border-color .18s;
 }
 .sg-a.ok{
-  width:var(--sg-ok); height:var(--sg-ok); font-size:16px; color:#fff3e2;
-  border:1.5px solid rgba(255,154,60,.75);
-  background:radial-gradient(circle at 38% 30%, rgba(255,154,60,.34), rgba(255,154,60,.09) 64%), rgba(9,13,22,.84);
-  box-shadow:0 0 24px -8px rgba(255,154,60,.7), inset 0 1px 0 rgba(255,255,255,.1), 0 10px 22px -14px #000;
+  width:var(--sg-ok); height:var(--sg-ok); font-size:15px; color:#fff3e2;
+  border:1.5px solid rgba(255,154,60,.7);
+  background:radial-gradient(circle at 38% 30%, rgba(255,154,60,.26), rgba(255,154,60,.06) 66%), rgba(9,13,22,.6);
+  box-shadow:0 0 18px -10px rgba(255,154,60,.8), inset 0 1px 0 rgba(255,255,255,.08);
 }
 .sg-a.act{
-  width:var(--sg-act); height:var(--sg-act); font-size:14px; color:#dff6ff; margin-right:18px;
-  border:1.5px solid rgba(63,216,255,.55);
-  background:radial-gradient(circle at 38% 30%, rgba(63,216,255,.3), rgba(63,216,255,.07) 64%), rgba(9,13,22,.84);
-  box-shadow:0 0 20px -8px rgba(63,216,255,.65), inset 0 1px 0 rgba(255,255,255,.09), 0 10px 22px -14px #000;
+  width:var(--sg-act); height:var(--sg-act); font-size:13.5px; color:#dff6ff; margin-right:16px;
+  border:1.5px solid rgba(63,216,255,.5);
+  background:radial-gradient(circle at 38% 30%, rgba(63,216,255,.22), rgba(63,216,255,.05) 66%), rgba(9,13,22,.6);
+  box-shadow:0 0 16px -10px rgba(63,216,255,.9), inset 0 1px 0 rgba(255,255,255,.07);
 }
 .sg-a:active{transform:scale(.93); filter:brightness(1.25)}
 .sg-a.flash{filter:brightness(1.6)}
+/* 静止状态：整组淡下去、去掉毛玻璃与光晕 —— 地图上的字在下面照样看得见 */
+.cmdbar.sg.timid .sg-stick, .cmdbar.sg.timid .sg-acts{opacity:.42}
+.cmdbar.sg.timid .sg-a, .cmdbar.sg.timid .sg-ring{backdrop-filter:none; -webkit-backdrop-filter:none}
+.cmdbar.sg.timid .sg-a.ok{box-shadow:none}
+.cmdbar.sg.timid .sg-a.act{box-shadow:none}
+.cmdbar.sg.timid .sg-ring{box-shadow:none; background:rgba(9,13,22,.22)}
+.cmdbar.sg.timid .sg-stick .chev{background:rgba(255,255,255,.03); border-color:rgba(120,190,255,.1)}
+.cmdbar.sg.timid .sg-imm{opacity:.5}
 .sg-imm{
   position:absolute; left:16px; bottom:var(--sg-bot); pointer-events:auto;
   font-family:inherit; font-size:11.5px; padding:8px 12px; border-radius:999px; cursor:pointer;
@@ -2047,7 +2066,7 @@ body{ height:var(--vh) }
    ===================================================================== */
 const $ = id => document.getElementById(id);
 const IS_DEPLOY = true;
-const APP_BUILD = '10-02 03:47·215eb9';     // 构建时替换成时间戳；直接开模板时保持占位符 = 不自检
+const APP_BUILD = '10-02 04:01·306930';     // 构建时替换成时间戳；直接开模板时保持占位符 = 不自检
 const STORE_KEY = 'saku_pw';
 const WORLD_START = {
   date:  new Date(2026, 8, 19, 0, 0, 0),
@@ -2750,13 +2769,23 @@ const SG_MENU_GROUPS = [
       {k:'?', t:'帮助 ?'}, {k:'Escape', t:'返回 Esc'}, {k:'r', t:'重开 R'},
       {k:'F3', t:'诊断 F3'}, {k:'F2', t:'mod F2'} ] },
 ];
+/* 手机操作层的尺寸：**唯一真源**（SG_SIZE 表 → sgLayout 算成 px 写进 CSS 变量）。
+   为什么不写在 CSS 里算：手机浏览器对 clamp()/env() 的支持参差，CSS 里算尺寸只要有一条
+   不认，width 就退回 auto —— 圆形大键当场塌成小方块、摇杆的热区散架。
+   数字格式：[下限 px, 屏宽比例, 上限 px]
+     hit  摇杆热区（透明，拇指拖动范围）——大：拖到边缘也不丢
+     ring 摇杆画出来的圆 ——小：满屏 ASCII 地图，少盖一块是一块
+     ok   确认键（右下落点）· act 交互键 */
+const SG_SIZE = { hit:[120, 0.36, 152], ring:[96, 0.29, 124], ok:[72, 0.21, 84], act:[64, 0.185, 76] };
 let SPACE_KEY_OK = null, SPACE_ZOOM = null;
 let SPACE_INFO = false;        // 游戏左下角状态栏是否展开；手机默认收起，见 spaceInfoSet
 let SPACE_MENU = false;        // 右上角菜单抽屉是否打开
 let SPACE_HIDE = false;        // 沉浸模式：收起摇杆和动作键
 let SG_SEEN = -1, SG_LAST_AT = 0, SG_TIMER = null, SG_HINT = '';
+let SG_TOUCH_AT = 0;           // 最后一次碰控件的时间：静止久了就把整组淡下去
 const SG_DEAD = 0.26;          // 摇杆死区（半径比例）：中心这一圈不触发方向，防误触
 const SG_RPT_FIRST = 240, SG_RPT_NEXT = 135;   // 按住不放的连走节奏（毫秒）
+const SG_IDLE_MS = 2600;       // 多久不碰就淡下去
 const SG_LOG_SKIP = {dim:1};   // 走一步记一条「赶路 1 分钟」，浮层不显示这类
 
 
@@ -2948,6 +2977,7 @@ function stickDir(dx, dy, r){
 function bindStick(el){
   var rect = null, cx = 0, cy = 0, r = 1, cur = null, pid = null, t1 = null, t2 = null;
   var knob = el.querySelector('.knob');
+  var ring = el.querySelector('.sg-ring');
   var chevs = el.querySelectorAll('.chev');
 
   function lit(dir){
@@ -2990,10 +3020,14 @@ function bindStick(el){
   }
   function begin(tx, ty){
     rect = el.getBoundingClientRect();
-    var w = rect.width || el.offsetWidth || 144;
+    var w = rect.width || el.offsetWidth || 132;
     cx = rect.left + (rect.width || w) / 2;
     cy = rect.top + (rect.height || w) / 2;
-    r = w / 2;
+    /* 死区按**看得见的那个圆**算，不按热区 —— 热区比圆大一圈是给拇指拖的余地，
+       不该让「要推多远才有反应」也跟着变大。 */
+    var rw = 0;
+    try{ rw = ring ? ring.getBoundingClientRect().width : 0; }catch(e){ rw = 0; }
+    r = (rw || w) / 2;
     el.classList.add('on');
     move(tx, ty);
   }
@@ -3105,11 +3139,39 @@ function sgKeysSet(hide){
   } else if(pill && !SPACE_HIDE) pill.parentNode.removeChild(pill);
 }
 
+/* ---------------- 尺寸：按屏宽算好写进 CSS 变量（不依赖 CSS 的 clamp/env 支持） ---------------- */
+function sgSafeInset(side){
+  try{
+    var v = getComputedStyle(document.documentElement).getPropertyValue('--safe-' + side);
+    return parseFloat(v) || 0;
+  }catch(e){ return 0; }
+}
+function sgLayout(){
+  var bar = $('spaceCmd');
+  if(!bar) return null;
+  /* 竖屏按短边算：横屏/分屏时控件也不会撑爆 */
+  var w = window.innerWidth || 360;
+  var short = Math.min(w, window.innerHeight || 780);
+  var of = function(spec){ return Math.round(Math.max(spec[0], Math.min(spec[2], short * spec[1]))); };
+  var px = { hit: of(SG_SIZE.hit), ring: of(SG_SIZE.ring), ok: of(SG_SIZE.ok), act: of(SG_SIZE.act) };
+  bar.style.setProperty('--sg-hit', px.hit + 'px');
+  bar.style.setProperty('--sg-ring', px.ring + 'px');
+  bar.style.setProperty('--sg-ok', px.ok + 'px');
+  bar.style.setProperty('--sg-act', px.act + 'px');
+  bar.style.setProperty('--sg-top', sgSafeInset('top') + 'px');
+  bar.style.setProperty('--sg-bot', Math.max(40, sgSafeInset('bot') + 18) + 'px');
+  px.w = w; px.bottom = Math.max(40, sgSafeInset('bot') + 18);
+  return px;
+}
+
 /* ---------------- 顶部信息条刷新（每 250ms 一次，只改文本不重建节点） ---------------- */
 function spaceHudTick(){
   var bar = $('spaceCmd');
   if(!bar){ if(SG_TIMER){ clearInterval(SG_TIMER); SG_TIMER = null; } return; }
   if(!$('sgHud')){ renderSpaceCmd(); return; }
+  /* 不用手的时候整组淡下去（地图全亮），一碰立刻回来 */
+  var idle = (Date.now() - SG_TOUCH_AT) > SG_IDLE_MS;
+  if(bar.classList.contains('timid') !== idle) bar.classList.toggle('timid', idle);
   /* 信息条高度 = 游戏两行的高度：正好盖住它自己的「标题行 + 状态行」，不多占地图 */
   var rowH = sgRowH();
   var hudH = rowH > 6 ? Math.round(rowH * 2) : 35;
@@ -3169,7 +3231,6 @@ function renderSpaceCmd(){
   if(SPACE_ZOOM === null) SPACE_ZOOM = spaceZoomGet();
   const mkChev = function(d, cls, ch){ return '<span class="chev ' + cls + '" data-d="' + d + '">' + ch + '</span>'; };
   bar.className = 'cmdbar sg' + (SPACE_HIDE ? ' hidekeys' : '');
-  bar.style.setProperty('--sg-hud', (sgRowH() > 6 ? Math.round(sgRowH() * 2) : 35) + 'px');
   bar.innerHTML =
       '<div class="sg-hud" id="sgHud">'
     +   '<span class="sg-scene">◈ …</span>'
@@ -3185,14 +3246,19 @@ function renderSpaceCmd(){
     +   '<button class="sg-fab" data-menu="1" aria-label="菜单">≡</button>'
     + '</div>'
     + '<div class="sg-stick" id="sgStick" aria-label="方向">'
-    +   mkChev('ArrowUp', 'u', '▲') + mkChev('ArrowLeft', 'l', '◀')
-    +   mkChev('ArrowRight', 'r', '▶') + mkChev('ArrowDown', 'd', '▼')
-    +   '<span class="knob">✛</span>'
+    +   '<div class="sg-ring">'
+    +     mkChev('ArrowUp', 'u', '▲') + mkChev('ArrowLeft', 'l', '◀')
+    +     mkChev('ArrowRight', 'r', '▶') + mkChev('ArrowDown', 'd', '▼')
+    +     '<span class="knob">✛</span>'
+    +   '</div>'
     + '</div>'
     + '<div class="sg-acts">'
     +   '<button class="sg-a act" data-k="e">交互</button>'
     +   '<button class="sg-a ok" data-k="Enter">确认</button>'
     + '</div>';
+  sgLayout();
+  SG_TOUCH_AT = Date.now();
+  bar.classList.remove('timid');
 
   Array.prototype.forEach.call(bar.querySelectorAll('.sg-a, .sg-back'), function(b){
     bindCmdBtn(b, function(){ pressKey(b); });
@@ -3202,6 +3268,13 @@ function renderSpaceCmd(){
   });
   bindCmdBtn(bar.querySelector('.sg-spd'), function(){ sgSpeedCycle(); });
   bindStick(bar.querySelector('.sg-stick'));
+  /* 碰任何控件都算「在用」：淡出立刻撤销 */
+  ['pointerdown','touchstart'].forEach(function(t){
+    bar.addEventListener(t, function(){ SG_TOUCH_AT = Date.now();
+      if(bar.classList.contains('timid')){ bar.classList.remove('timid'); } }, {passive:true, capture:true});
+  });
+  window.addEventListener('resize', sgLayout);
+  window.addEventListener('orientationchange', function(){ setTimeout(sgLayout, 200); });
   sgKeysSet(SPACE_HIDE);
   SPACE_MENU = false;
   if(SG_TIMER) clearInterval(SG_TIMER);
