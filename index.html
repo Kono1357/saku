@@ -2008,7 +2008,7 @@ body{ height:var(--vh) }
    ===================================================================== */
 const $ = id => document.getElementById(id);
 const IS_DEPLOY = true;
-const APP_BUILD = '10-02 04:32·7c4733';     // 构建时替换成时间戳；直接开模板时保持占位符 = 不自检
+const APP_BUILD = '10-02 04:57·e740b0';     // 构建时替换成时间戳；直接开模板时保持占位符 = 不自检
 const STORE_KEY = 'saku_pw';
 const WORLD_START = {
   date:  new Date(2026, 8, 19, 0, 0, 0),
@@ -2651,7 +2651,7 @@ function showView(id, originEl){
     /* ?log=0：游戏自己那条底部日志**整块不画**（壳画在顶部浮层里）。
        不关掉的话它会贴在屏幕最底，正好被右下角的按键压住，看着像坏了。
        关掉之后地图还多出「分隔线 + N 行」。 */
-    var ssrc = (IS_DEPLOY ? 'space.html' : '/game/space.html') + '?log=0';
+    var ssrc = (IS_DEPLOY ? 'space.html' : '/game/space.html') + '?log=0&top=1';
     /* 手机默认只算出 9px 字号，太瞎眼 —— 第一次打开就给个适合手机的起手值。
        用户自己调过之后（localStorage 里已有）就不再覆盖。 */
     if(!IS_DEPLOY){
