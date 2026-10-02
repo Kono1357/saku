@@ -2008,7 +2008,7 @@ body{ height:var(--vh) }
    ===================================================================== */
 const $ = id => document.getElementById(id);
 const IS_DEPLOY = true;
-const APP_BUILD = '10-02 04:57·e740b0';     // 构建时替换成时间戳；直接开模板时保持占位符 = 不自检
+const APP_BUILD = '10-02 05:18·625f8f';     // 构建时替换成时间戳；直接开模板时保持占位符 = 不自检
 const STORE_KEY = 'saku_pw';
 const WORLD_START = {
   date:  new Date(2026, 8, 19, 0, 0, 0),
@@ -2874,6 +2874,63 @@ function sgWarn(){
   } else if(!need && w) w.parentNode.removeChild(w);
 }
 
+/* ---------------- 自检信标：把"手机上到底长什么样"发回容器 ----------------
+   容器里没有浏览器，无障碍服务又不一定开着（截不了屏），所以界面的真机问题只能靠猜。
+   这一招让页面自己报告：视口多大、iframe 铺到哪、按键在哪、屏幕上那几个点到底是什么元素。
+   打到 127.0.0.1:8088（就是这套服务），由它写进 logs/server.log，我读日志就行。
+   线上是 https，但 127.0.0.1 属于"可信来源"，Chrome 不会按混合内容拦掉。
+   失败就算了，不抛错、不影响游戏。 */
+function sgProbe(x, y){
+  try{
+    var e = document.elementFromPoint(x, y);
+    if(!e) return '-';
+    if(e.id) return '#' + e.id;
+    var c = String(e.className || '').split(' ').filter(function(k){ return k && k !== 'hidden'; })[0];
+    return (e.tagName || '?').toLowerCase() + (c ? '.' + c : '');
+  }catch(err){ return '?'; }
+}
+function sgReport(tag){
+  try{
+    var W = window.innerWidth || 0, H = window.innerHeight || 0;
+    var fr = document.getElementById('spaceFrame');
+    var r = fr ? fr.getBoundingClientRect() : { top: -1, bottom: -1, height: -1 };
+    var box = function(sel){
+      var e = document.querySelector(sel);
+      if(!e) return '-';
+      var b = e.getBoundingClientRect();
+      return Math.round(b.left) + ',' + Math.round(b.top) + ',' + Math.round(b.width) + 'x' + Math.round(b.height);
+    };
+    var inner = '';
+    try{
+      var d = fr && fr.contentDocument, i2 = d && d.getElementById('info'), mp = d && d.getElementById('modpanel');
+      var st = d && d.getElementById('stage'), scr = d && d.getElementById('screen');
+      inner = (i2 ? (i2.classList.contains('hidden') ? 'info:隐' : 'info:显!') : 'info:?')
+            + (mp ? (mp.classList.contains('hidden') ? ',mod:隐' : ',mod:显!') : '')
+            + (st ? ',stage:' + Math.round(st.clientHeight) : '')
+            + (scr ? ',pre:' + Math.round(scr.getBoundingClientRect().height) : '');
+    }catch(e){ inner = 'x-domain'; }
+    var cw = fr && fr.contentWindow;
+    try{
+      if(cw && cw.__space && cw.__space.game){
+        var L = cw.__space.game.layout();
+        inner += ',log' + L.logRows + ',map' + L.mapH + ',win' + L.winW + 'x' + L.winH
+               + ',winY' + L.winY + ',设计' + L.designW + 'x' + L.designH;
+      }
+    }catch(e){}
+    var q = '/__ui?b=' + encodeURIComponent(String(APP_BUILD).slice(0,16))
+      + '&t=' + tag + '&wh=' + W + 'x' + H + '&dpr=' + (window.devicePixelRatio || 1)
+      + '&frame=' + Math.round(r.top) + '..' + Math.round(r.bottom) + '(' + Math.round(r.height) + ')'
+      + '&hud=' + box('.sg-hud') + '&stick=' + box('.sg-stick') + '&pad=' + box('.sg-pad')
+      + '&at_mid=' + sgProbe(W >> 1, H >> 1)
+      + '&at_under=' + sgProbe(W >> 1, Math.round(H * 0.78))
+      + '&at_b40=' + sgProbe(W >> 1, H - 40)
+      + '&at_bl=' + sgProbe(20, H - 40)
+      + '&at_br=' + sgProbe(W - 20, H - 40)
+      + '&' + inner;
+    new Image().src = (IS_DEPLOY ? 'http://127.0.0.1:8088' : '') + q;
+  }catch(e){}
+}
+
 /* ---------------- 摇杆：纯方向映射（可单测）+ 按住连走 + 滑动换向 ---------------- */
 function stickDir(dx, dy, r){
   if(!(r > 0)) r = 1;
@@ -3197,6 +3254,8 @@ function renderSpaceCmd(){
   if(SG_TIMER) clearInterval(SG_TIMER);
   SG_TIMER = setInterval(spaceHudTick, 250);
   spaceHudTick();
+  setTimeout(function(){ sgReport('2s'); }, 2000);
+  setTimeout(function(){ sgReport('6s'); }, 6000);
 }
 
 
