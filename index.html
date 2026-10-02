@@ -401,6 +401,29 @@ ul.items li.night .x{color:#b9c5d8}
   -webkit-tap-highlight-color:transparent;
 }
 
+/* ---------- ②b 走廊日志板：填在「房间下沿」到屏幕底之间那条空带里 ----------
+   房间只有 24 行、屏幕有 42 行，下面那 18 行本来是纯黑的空背景（用户：「地图下面一整片都是黑的」）。
+   日志就摆进这条带子：位置由壳按房间实际高度算（winY+originY+sceneH），场景多高都对得上。
+   它不是面板 —— 容器完全透明，只有每一行文字有个很淡的底衬，读起来像"浮在地图上的字"。 */
+.sg-blog{
+  position:absolute; left:10px; right:10px; top:50%;
+  display:flex; flex-direction:column; justify-content:flex-end; gap:2px;
+  pointer-events:none; overflow:hidden;
+}
+.sg-blog .bl{
+  align-self:flex-start; max-width:100%;
+  padding:1px 7px; border-radius:6px;
+  background:rgba(9,13,22,.5);
+  font-family:ui-monospace,Consolas,"Noto Sans CJK SC",monospace;
+  font-size:12px; line-height:1.5; color:#8fa3bb;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.sg-blog .bl.new{color:#cfdcec}
+.sg-blog .bl.good{color:#8fd8ac}
+.sg-blog .bl.warn{color:#e8cf94}
+.sg-blog .bl.danger{color:#e79aa2}
+.sg-blog .bl.hint{color:#ffd9a8; background:rgba(24,16,8,.6)}
+
 /* ---------- 菜单抽屉：从右上角展开（唯一会浮在地图上的"面"） ---------- */
 .sg-veil{position:absolute; inset:0; background:rgba(3,6,12,.5); pointer-events:auto;
   animation:sgFade .16s ease-out}
@@ -2008,7 +2031,7 @@ body{ height:var(--vh) }
    ===================================================================== */
 const $ = id => document.getElementById(id);
 const IS_DEPLOY = true;
-const APP_BUILD = '10-02 05:18·625f8f';     // 构建时替换成时间戳；直接开模板时保持占位符 = 不自检
+const APP_BUILD = '10-02 05:26·0f7ac8';     // 构建时替换成时间戳；直接开模板时保持占位符 = 不自检
 const STORE_KEY = 'saku_pw';
 const WORLD_START = {
   date:  new Date(2026, 8, 19, 0, 0, 0),
@@ -2731,7 +2754,7 @@ let SPACE_INFO = false;        // 游戏左下角状态栏是否展开；手机�
 let SPACE_MENU = false;        // 右上角菜单抽屉是否打开
 let SPACE_HIDE = false;        // 沉浸模式：收起摇杆和动作键
 let SG_TIMER = null, SG_HINT = '';
-let SG_SEEN = -1, SG_LAST_AT = 0;
+let SG_SEEN = -1, SG_LAST_AT = 0, SG_BLOG_N = -1, SG_BLOG_LAST = -2;
 const SG_LOG_SKIP = {dim:1};   // 走一步记一条「赶路 1 分钟」，浮层不显示这类
 const SG_DEAD = 0.26;          // 摇杆死区（半径比例）：中心这一圈不触发方向，防误触
 const SG_RPT_FIRST = 240, SG_RPT_NEXT = 135;   // 按住不放的连走节奏（毫秒）
@@ -2872,6 +2895,57 @@ function sgWarn(){
     w.textContent = '操作键暂时注不进游戏（线上版跨域）。画面仍可点着走／看，完整手机版等正式打包。';
     bar.appendChild(w);
   } else if(!need && w) w.parentNode.removeChild(w);
+}
+
+/* ---------------- ②b 日志板：填满房间下沿到屏幕底之间的空带 ----------------
+   位置不是拍脑袋来的：问内核要「房间在屏幕上的第几行到第几行」（winY+originY+sceneH），
+   再乘单行高换成像素 —— 换场景（舰桥 24 行 / 引擎室 16 行 / 荒野 28 行）都自动对得上。
+   房间比屏幕还高（要滚动）时就没有空带，日志板自动收起。 */
+const SG_LINE_H = 20;          /* 日志板一行的像素高（约等于 12px 字 + 2px 间隙） */
+function sgRoomBottomPx(){
+  var g = spaceGame();
+  if(!g || !g._cam) return null;
+  var c = g._cam, rowH = sgRowH();
+  if(!(rowH > 4) || !c.sceneH) return null;
+  var bottomRow = num0(c.winY) + num0(c.originY) + num0(c.sceneH);
+  return { px: bottomRow * rowH, rowH: rowH, sceneH: c.sceneH,
+           winH: num0(c.viewH), tall: c.sceneH > num0(c.viewH) };
+}
+function num0(v){ return (typeof v === 'number' && isFinite(v)) ? v : 0; }
+function sgBlogTick(st){
+  var box = $('sgBlog');
+  if(!box || !st){ return; }
+  var info = sgRoomBottomPx();
+  if(!info || info.tall){ box.style.display = 'none'; return; }
+  box.style.display = '';
+  var H = window.innerHeight || 780;
+  var top = Math.round(info.px) + 6;
+  var bottom = 10;                                   /* 留出底部安全边 */
+  box.style.top = top + 'px';
+  box.style.bottom = bottom + 'px';
+  var avail = H - top - bottom;
+  var room = Math.floor(avail / SG_LINE_H);
+  if(room < 1){ box.style.display = 'none'; return; }
+  var cap = Math.min(room, 12);                      /* 最多 12 行，再多就不像"短日志"了 */
+  var logs = st.logs || [], out = [];
+  for (var i = logs.length - 1; i >= 0 && out.length < cap; i--){
+    var e = logs[i];
+    if(!e || SG_LOG_SKIP[e.level]) continue;         /* 「赶路 1 分钟」这种噪音不要 */
+    out.push(e);
+  }
+  out.reverse();
+  if(out.length === SG_BLOG_N && SG_BLOG_LAST === (logs.length ? logs[logs.length-1].t : -1)) return;
+  SG_BLOG_N = out.length; SG_BLOG_LAST = logs.length ? logs[logs.length-1].t : -1;
+  var html = '';
+  for (var k = 0; k < out.length; k++){
+    var lv = out[k].level, cls = (lv === 'good' || lv === 'warn' || lv === 'danger') ? lv : '';
+    if(k === out.length - 1) cls += ' new';
+    html += '<div class="bl ' + cls + '">' + sgEsc(String(out[k].text || '')) + '</div>';
+  }
+  box.innerHTML = html;
+}
+function sgEsc(t){
+  return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 /* ---------------- 自检信标：把"手机上到底长什么样"发回容器 ----------------
@@ -3152,6 +3226,7 @@ function spaceHudTick(){
     act.setAttribute('data-k', st.modal && !st.dialogue ? 'Escape' : 'e');
   }
   sgLogTick(st);
+  sgBlogTick(st);
 }
 
 /* ---------------- ② 短文本日志浮层 ----------------
@@ -3225,6 +3300,7 @@ function renderSpaceCmd(){
     +   '<button class="sg-fab" data-menu="1" aria-label="菜单">≡</button>'
     + '</div>'
     + '<div class="sg-log" id="sgLog"></div>'
+    + '<div class="sg-blog" id="sgBlog"></div>'
     + '<div class="sg-stick" id="sgStick" aria-label="方向">'
     +   '<span class="dkey u" data-d="ArrowUp">▲</span>'
     +   '<span class="dkey l" data-d="ArrowLeft">◀</span>'
