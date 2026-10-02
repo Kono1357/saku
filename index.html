@@ -263,7 +263,13 @@ ul.items li.night .x{color:#b9c5d8}
   --sg-fill:rgba(14,20,32,.6);           /* 半透明材质：不透明度 60% */
 }
 /* 画面铺满全屏：不缩、不垫、不压 */
-.game-shell.space .game-frame{position:absolute; inset:0}
+/* ⚠ iframe 是**替换元素**：绝对定位 + top/bottom:0 + height:auto 时，
+   高度按规定取的是它的**固有高度**（300×150），bottom 会被直接忽略 ——
+   画面就只剩 150px 高（≈8 行），下面全是没被铺满的页面底色。
+   （2026-10-02：用户截图上那条"黑带"量出来是 #080b14 = 页面底色，
+     而不是游戏底色 #06060a/纯黑，才把这个抓出来。）
+   所以这里必须显式写 height:100%（百分比对包含块高度求解，各浏览器都认）。 */
+.game-shell.space .game-frame{position:absolute; left:0; top:0; width:100%; height:100%}
 
 .cmdbar.sg{
   position:absolute; inset:0; z-index:10; pointer-events:none;
@@ -2031,7 +2037,7 @@ body{ height:var(--vh) }
    ===================================================================== */
 const $ = id => document.getElementById(id);
 const IS_DEPLOY = true;
-const APP_BUILD = '10-02 06:07·9152a3';     // 构建时替换成时间戳；直接开模板时保持占位符 = 不自检
+const APP_BUILD = '10-02 06:09·2a2c9d';     // 构建时替换成时间戳；直接开模板时保持占位符 = 不自检
 const STORE_KEY = 'saku_pw';
 const WORLD_START = {
   date:  new Date(2026, 8, 19, 0, 0, 0),
