@@ -236,34 +236,34 @@ ul.items li.night .x{color:#b9c5d8}
 .game-frame{flex:1; width:100%; border:0; background:#2e2822; display:block}
 
 /* ============================================================
-   太空游戏的操作层 —— 手机优先 · 赛博终端风 · 手柄式底座
+   太空游戏的操作层 —— 手机优先 · 赛博终端风 · 全透明浮层
    ────────────────────────────────────────────────────────────
-   早期做法是「控件浮在满屏地图上」，结果是摇杆压住地图（用户：看不清界面了）。
-   现在改成**分区**：屏幕从上到下切成三段，谁也不压谁 ——
-     ① 顶部信息条（2 行文字高，正好顶替游戏自己的标题行+状态行）
-     ② 游戏画面 iframe（顶部到底座之间，地图 + 游戏自己的日志条都在这段里）
-     ③ 底部控制底座 .sg-deck（约屏幕下方 1/3，深色半透明面板）
-          ├ 左下：虚拟摇杆（热区大、画得小）
-          └ 右下：确认 / 交互 **两个圆角矩形大键**，右对齐、垂直排一列
-   铁律：iframe 的 bottom = 底座高度 —— 地图**一格都不会被盖住**。
-   尺寸一律由 JS 算（SG_SIZE + sgLayout）写进 CSS 变量，这里只放纯 px 兜底：
-   手机浏览器对 clamp()/env() 支持参差，CSS 里算尺寸只要有一条不认，width 就退回
-   auto —— 圆角矩形大键会当场塌成贴着文字的小方块。
-   ============================================================ */
+   三代演进（每一代都是用户看完真机给的反馈）：
+     ① 控件浮在满屏地图上 + 底部粗命令条  → 「地图被压掉 1/4」
+     ② 底部深色底座占 1/3                → 「画面依旧被遮挡、太重」
+     ③ 现在：**画面铺满全屏，控件全透明浮在四角**，只有必要的东西才浮上来
+   纵轴：
+     ① 顶部信息条（2 行文字高，顶替游戏自己的标题行+状态行 —— 替换，不是新增）
+     ② 画面 iframe（inset 0，铺满全屏；游戏自己的底部日志条关掉，`?log=0`）
+     ③ 左下角：十字方向键（半透明，四格，热区比图形大一圈）
+     ④ 右下角：确认 / 交互 **两个同尺寸小圆角正方形**，贴右下角竖排
+   什么才准浮在地图上：只有这两个控件 + 信息条。日志改成信息条下面的半透明浮层，
+   人物永远在地图正中，所以「不挡视线」。
+   尺寸一律由 JS 算（SG_SIZE + sgLayout）写进 CSS 变量（老浏览器 clamp 支持参差），
+   这里只放纯 px 兜底。 */
 .game-shell.space{
   --sg-top:0px;
-  --sg-deck:232px;                       /* 底部控制底座高度 */
-  --sg-bot:40px;                         /* 底座内控件距屏幕底 */
-  --sg-hit:130px; --sg-ring:108px;       /* 摇杆：热区 / 画出来的圆 */
-  --sg-pad-w:104px; --sg-ok:58px; --sg-act:52px; --sg-gap:8px;
+  --sg-bot:22px;                         /* 控件距屏幕底（避开手机手势区） */
+  --sg-pad:38px;  --sg-gap:4px;          /* 十字键：每格边长 / 格间缝 */
+  --sg-key:52px;  --sg-kgap:9px;         /* 右下两个正方形按键：边长 / 它们之间的缝 */
+  --sg-hit:124px;                        /* 十字键的透明热区（= 3×格 + 2×缝） */
   --sg-hud:35px;
   --sg-cyan:#3fd8ff; --sg-orange:#ff9a3c;
-  --sg-line:rgba(120,190,255,.22);
+  --sg-line:rgba(150,185,225,.26);
+  --sg-fill:rgba(14,20,32,.6);           /* 半透明材质：不透明度 60% */
 }
-/* 画面整体下移到安全区之下，上不压信息条、下不压底座 —— 地图一格都不会被盖住 */
-.game-shell.space .game-frame{
-  position:absolute; left:0; right:0; top:var(--sg-top); bottom:var(--sg-deck);
-}
+/* 画面铺满全屏：不缩、不垫、不压 */
+.game-shell.space .game-frame{position:absolute; inset:0}
 
 .cmdbar.sg{
   position:absolute; inset:0; z-index:10; pointer-events:none;
@@ -272,198 +272,144 @@ ul.items li.night .x{color:#b9c5d8}
 }
 .cmdbar.sg.hidekeys .sg-stick, .cmdbar.sg.hidekeys .sg-pad{display:none}
 .cmdbar.sg .hidden{display:none !important}
-/* 层级：底座 1 < 信息条 2 < 警告 3 < 遮罩 5 < 抽屉 6 < 菜单 7 */
-.cmdbar.sg .sg-deck{z-index:1}
+/* 层级：控件 1 < 信息条/日志 2 < 警告 3 < 遮罩 5 < 抽屉 6 */
+.cmdbar.sg .sg-stick, .cmdbar.sg .sg-pad, .cmdbar.sg .sg-imm{z-index:1}
 .cmdbar.sg .sg-hud{z-index:2}
+.cmdbar.sg .sg-log{z-index:2}
 .cmdbar.sg .sg-warn{z-index:3}
 .cmdbar.sg .sg-veil{z-index:5}
 .cmdbar.sg .sg-panel{z-index:6}
-.cmdbar.sg .sg-menu{z-index:7}
 
-/* ---------- ① 顶部信息条：地图状态 / 速度 / 时间（提示优先） ---------- */
+/* ---------- ① 顶部信息条：状态 + 时间（正好顶替游戏自己那两行） ---------- */
 .sg-hud{
   position:absolute; left:0; right:0; top:var(--sg-top); height:var(--sg-hud);
-  display:flex; align-items:center; gap:6px; padding:0 8px;
+  display:flex; align-items:center; gap:6px; padding:0 6px 0 8px;
   pointer-events:auto; overflow:hidden;
-  background:linear-gradient(180deg, rgba(9,13,22,.97), rgba(9,13,22,.9));
-  border-bottom:1px solid var(--sg-line);
-  box-shadow:0 1px 0 rgba(63,216,255,.10), 0 8px 20px -14px #000;
+  background:linear-gradient(180deg, rgba(9,13,22,.86), rgba(9,13,22,.6));
+  border-bottom:1px solid rgba(120,190,255,.14);
   font-size:12.5px; color:#c7d6ea;
 }
 .sg-hud .sg-scene{
-  color:#ffd9a8; font-weight:600; max-width:8em;
+  color:#ffd9a8; font-weight:600; max-width:6.5em; min-width:0;
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
-.sg-hud .sg-pos{color:#7f93b0; font-family:ui-monospace,Consolas,monospace; font-size:11px}
-.sg-hud .sg-hp{display:flex; align-items:center; gap:5px; margin-left:auto;
+.sg-hud .sg-pos{color:#7f93b0; font-family:ui-monospace,Consolas,monospace; font-size:11px; flex:0 0 auto}
+.sg-hud .sg-hp{display:flex; align-items:center; gap:5px; margin-left:auto; flex:0 0 auto;
   color:#9fd8b4; font-family:ui-monospace,Consolas,monospace; font-size:11.5px}
-.sg-hud .sg-hp .bar{display:block; width:36px; height:4px; border-radius:2px;
+.sg-hud .sg-hp .bar{display:block; width:30px; height:4px; border-radius:2px;
   background:rgba(255,255,255,.15); overflow:hidden}
 .sg-hud .sg-hp .bar i{display:block; height:100%; border-radius:2px;
   background:linear-gradient(90deg,#3fd8ff,#5ce6a0); transition:width .25s}
 .sg-hud .sg-hp.low{color:#ff9d9d}
 .sg-hud .sg-hp.low .bar i{background:linear-gradient(90deg,#ff9a3c,#ff6b7a)}
-/* 游戏里有提示（world.hint）时，整条信息条让给提示 —— 它本来占的就是游戏那一行 */
-.sg-hud.hinting .sg-scene, .sg-hud.hinting .sg-pos, .sg-hud.hinting .sg-hp{display:none}
-.sg-hud .sg-hint{
-  display:none; flex:1 1 auto; min-width:0; color:#ffe0b8; font-weight:600;
-  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-}
-.sg-hud.hinting .sg-hint{display:block}
-/* 速度胶囊：点一下就换档（暂停 → 1x → 2x → 4x → 8x） */
 .sg-spd{
   flex:0 0 auto; font-family:inherit; font-size:11px; line-height:1; cursor:pointer;
-  padding:5px 9px; border-radius:999px;
-  border:1px solid rgba(63,216,255,.32); background:rgba(63,216,255,.10);
+  padding:5px 8px; border-radius:999px;
+  border:1px solid rgba(63,216,255,.28); background:rgba(63,216,255,.09);
   color:#bfeaff; -webkit-tap-highlight-color:transparent; touch-action:manipulation;
 }
-.sg-spd.paused{border-color:rgba(255,154,60,.45); background:rgba(255,154,60,.12); color:#ffd9a8}
+.sg-spd.paused{border-color:rgba(255,154,60,.4); background:rgba(255,154,60,.11); color:#ffd9a8}
 .sg-spd:active{filter:brightness(1.3)}
 .sg-hud .sg-clock{
   flex:0 0 auto; font-family:ui-monospace,Consolas,monospace; font-size:15px; font-weight:700;
-  color:#eaf7ff; letter-spacing:.5px; text-shadow:0 0 10px rgba(63,216,255,.5);
+  color:#eaf7ff; letter-spacing:.5px; text-shadow:0 0 8px rgba(63,216,255,.35);
 }
-.sg-hud .sg-day{color:#6f8098; font-size:10.5px; font-family:ui-monospace,Consolas,monospace}
+/* 菜单：塞进信息条右端（一个 30px 高的小胶囊），不额外占地图 */
+.sg-fab{
+  flex:0 0 auto; height:26px; padding:0 9px; border-radius:8px; cursor:pointer;
+  font-family:inherit; font-size:13px; line-height:1; color:#b9cde3;
+  border:1px solid var(--sg-line); background:var(--sg-fill);
+  -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+}
+.sg-fab.on{border-color:rgba(63,216,255,.5); color:#dff6ff}
+.sg-fab:active{transform:scale(.95)}
+@media (max-width:344px){ .sg-hud .sg-pos{display:none} }
 
-/* ---------- ③ 底部控制底座：手柄式，两侧控件稳稳贴在面板上 ---------- */
-.sg-deck{
-  position:absolute; left:0; right:0; bottom:0; height:var(--sg-deck);
-  pointer-events:auto; overflow:hidden;
-  background:
-    radial-gradient(120% 90% at 18% 120%, rgba(63,216,255,.10), rgba(63,216,255,0) 62%),
-    radial-gradient(120% 90% at 88% 120%, rgba(255,154,60,.09), rgba(255,154,60,0) 60%),
-    linear-gradient(180deg, rgba(12,17,28,.80) 0%, rgba(8,11,19,.94) 46%, rgba(6,9,16,.98) 100%);
-  border-top:1px solid rgba(63,216,255,.22);
-  box-shadow:0 -14px 30px -20px #000, inset 0 1px 0 rgba(255,255,255,.05);
+/* ---------- ② 短文本日志：信息条下面的半透明浮层（浮完自己退） ---------- */
+.sg-log{
+  position:absolute; left:8px; right:8px; top:calc(var(--sg-top) + var(--sg-hud) + 5px);
+  display:flex; flex-direction:column; gap:3px; pointer-events:none;
 }
-/* 面板上的细网格：让「按键贴在面板上」有依托，不是浮在半空 */
-.sg-deck::before{
-  content:''; position:absolute; inset:0; pointer-events:none; opacity:.5;
-  background-image:
-    linear-gradient(rgba(120,190,255,.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(120,190,255,.045) 1px, transparent 1px);
-  background-size:22px 22px, 22px 22px;
+.sg-log .ln{
+  align-self:flex-start; max-width:100%; padding:3px 8px; border-radius:7px;
+  background:rgba(9,13,22,.62); border-left:2px solid rgba(120,190,255,.4);
+  font-size:12px; line-height:1.45; color:#cfdcec;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  animation:sgIn .16s ease-out;
 }
-.sg-deck .sg-deckline{
-  position:absolute; left:14px; right:14px; top:9px; height:1px;
-  background:linear-gradient(90deg, rgba(63,216,255,.28), rgba(63,216,255,.04) 42%, rgba(255,154,60,.22));
-}
+.sg-log .ln.good{border-left-color:rgba(92,230,160,.75)}
+.sg-log .ln.warn{border-left-color:rgba(255,207,107,.8); color:#ffeec6}
+.sg-log .ln.danger{border-left-color:rgba(255,107,122,.85); color:#ffd9dc}
+.sg-log .ln.hint{border-left-color:var(--sg-orange); color:#ffe0b8; background:rgba(24,16,8,.62)}
+.sg-log .ln.out{animation:sgOut .45s ease-in forwards}
+@keyframes sgIn{from{opacity:0; transform:translateY(-4px)} to{opacity:1; transform:none}}
+@keyframes sgOut{to{opacity:0}}
 
-/* ---------- 摇杆（底座左下）：热区大、画得小 ---------- */
+/* ---------- ③ 左下角：十字方向键（四格，半透明；热区比图形大一圈） ---------- */
 .sg-stick{
-  position:absolute; left:14px; bottom:var(--sg-bot);
-  width:var(--sg-hit); height:var(--sg-hit); border-radius:50%;
+  position:absolute; left:10px; bottom:var(--sg-bot);
+  width:var(--sg-hit); height:var(--sg-hit);
   pointer-events:auto; touch-action:none; background:none; border:0; padding:0;
+}
+.sg-stick .dkey{
+  position:absolute; width:var(--sg-pad); height:var(--sg-pad); border-radius:10px;
   display:flex; align-items:center; justify-content:center;
+  font-size:13px; color:#a9bdd4;
+  background:var(--sg-fill); border:1px solid var(--sg-line);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
+  transition:background .1s, color .1s, border-color .1s;
 }
-.sg-ring{
-  position:relative; width:var(--sg-ring); height:var(--sg-ring); border-radius:50%;
-  background:
-    radial-gradient(circle at 50% 42%, rgba(63,216,255,.10), rgba(63,216,255,0) 68%),
-    linear-gradient(180deg, rgba(24,33,50,.85), rgba(12,17,28,.9));
-  border:1px solid rgba(120,190,255,.3);
-  box-shadow:inset 0 2px 0 rgba(255,255,255,.06), inset 0 0 22px -10px rgba(63,216,255,.6),
-             0 6px 16px -12px #000;
-  transition:background .18s, border-color .18s, box-shadow .18s;
+.sg-stick .dkey.u{left:calc(var(--sg-pad) + var(--sg-gap)); top:0}
+.sg-stick .dkey.d{left:calc(var(--sg-pad) + var(--sg-gap)); bottom:0}
+.sg-stick .dkey.l{left:0; top:calc(var(--sg-pad) + var(--sg-gap))}
+.sg-stick .dkey.r{right:0; top:calc(var(--sg-pad) + var(--sg-gap))}
+.sg-stick .dkey.lit{
+  color:#04121a; background:rgba(63,216,255,.8); border-color:rgba(63,216,255,.95);
 }
-.sg-stick.on .sg-ring{
-  border-color:rgba(63,216,255,.6);
-  box-shadow:inset 0 0 26px -8px rgba(63,216,255,.6), 0 0 18px -10px rgba(63,216,255,.7);
+.sg-stick .mid{
+  position:absolute; left:calc(var(--sg-pad) + var(--sg-gap)); top:calc(var(--sg-pad) + var(--sg-gap));
+  width:var(--sg-pad); height:var(--sg-pad); border-radius:10px;
+  background:rgba(14,20,32,.34);
 }
-.sg-stick .chev{
-  position:absolute; width:30px; height:30px; border-radius:9px;
-  display:flex; align-items:center; justify-content:center;
-  font-size:12px; color:#8aa4c0; background:rgba(255,255,255,.05);
-  border:1px solid rgba(120,190,255,.18);
-  transition:background .1s, color .1s, box-shadow .1s;
-}
-.sg-stick .chev.u{left:50%; top:3px;    transform:translateX(-50%)}
-.sg-stick .chev.d{left:50%; bottom:3px; transform:translateX(-50%)}
-.sg-stick .chev.l{left:3px;  top:50%;    transform:translateY(-50%)}
-.sg-stick .chev.r{right:3px; top:50%;    transform:translateY(-50%)}
-.sg-stick .chev.lit{
-  color:#04121a; background:var(--sg-cyan); border-color:var(--sg-cyan);
-  box-shadow:0 0 14px -2px rgba(63,216,255,.75);
-}
-.sg-stick .knob{
-  position:absolute; left:50%; top:50%; width:36%; height:36%; border-radius:50%;
-  transform:translate(-50%,-50%) translate(var(--kx,0px), var(--ky,0px));
-  display:flex; align-items:center; justify-content:center;
-  background:radial-gradient(circle at 38% 32%, #36486a, #141d2e 74%);
-  border:1px solid rgba(160,200,255,.4); color:#bcd8f2; font-size:13px;
-  box-shadow:0 4px 12px -6px #000, inset 0 1px 0 rgba(255,255,255,.12);
-}
-.sg-stick.on .knob{border-color:rgba(63,216,255,.8); color:#eaf7ff;
-  box-shadow:0 0 16px -4px rgba(63,216,255,.7), inset 0 1px 0 rgba(255,255,255,.14)}
 
-/* ---------- 动作键（底座右下）：两个圆角矩形，右对齐、竖着排一列 ----------
-   最右下角 = 主键【确认】；它正上方、同宽同右边缘 = 副键【交互】。 */
+/* ---------- ④ 右下角：确认 / 交互 —— 两个同尺寸小圆角正方形 ----------
+   贴右下角竖排：最下面是主键【确认】，正上方是副键【交互】。
+   半透明（60%）、无强发光，低调融进背景。 */
 .sg-pad{
-  position:absolute; right:14px; bottom:var(--sg-bot);
-  display:flex; flex-direction:column; align-items:stretch; gap:var(--sg-gap);
-  width:var(--sg-pad-w); pointer-events:none;
+  position:absolute; right:10px; bottom:var(--sg-bot);
+  display:flex; flex-direction:column; align-items:flex-end;
+  gap:var(--sg-kgap); pointer-events:none;
 }
 .sg-a{
-  pointer-events:auto; width:100%; padding:0; cursor:pointer;
+  pointer-events:auto; width:var(--sg-key); height:var(--sg-key);
+  border-radius:12px; padding:0; cursor:pointer;
   display:flex; align-items:center; justify-content:center;
-  font-family:inherit; font-weight:700; letter-spacing:2px;
-  border-radius:16px;
+  font-family:inherit; font-size:14px; font-weight:600; letter-spacing:1px;
+  background:var(--sg-fill); border:1px solid var(--sg-line); color:#dbe7f5;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
   -webkit-tap-highlight-color:transparent; touch-action:manipulation;
-  transition:transform .1s, filter .1s, box-shadow .18s, border-color .18s;
+  transition:transform .1s, filter .1s, border-color .12s;
 }
-.sg-a.ok{
-  height:var(--sg-ok); font-size:16px; color:#fff4e6;
-  border:1.5px solid rgba(255,154,60,.78);
-  background:linear-gradient(180deg, rgba(255,154,60,.30), rgba(255,154,60,.10) 62%), rgba(14,10,6,.72);
-  box-shadow:0 0 20px -8px rgba(255,154,60,.85), inset 0 1px 0 rgba(255,255,255,.12);
+.sg-a.ok{ border-color:rgba(255,154,60,.42); color:#ffe2c2; background:rgba(26,17,9,.6) }
+.sg-a.act{ border-color:rgba(63,216,255,.38); color:#dff2ff; background:rgba(9,19,28,.6) }
+.sg-a:active{transform:translateY(1px); filter:brightness(1.25)}
+.sg-a.flash{filter:brightness(1.5)}
+.sg-imm{
+  position:absolute; left:10px; bottom:var(--sg-bot); pointer-events:auto;
+  font-family:inherit; font-size:11.5px; padding:8px 12px; border-radius:999px; cursor:pointer;
+  border:1px solid var(--sg-line); background:var(--sg-fill); color:#9fb4cc;
+  -webkit-tap-highlight-color:transparent;
 }
-.sg-a.act{
-  height:var(--sg-act); font-size:14px; color:#e4f7ff;
-  border:1.5px solid rgba(63,216,255,.6);
-  background:linear-gradient(180deg, rgba(63,216,255,.24), rgba(63,216,255,.07) 62%), rgba(7,12,20,.72);
-  box-shadow:0 0 16px -9px rgba(63,216,255,.9), inset 0 1px 0 rgba(255,255,255,.1);
-}
-.sg-a:active{transform:translateY(1px) scale(.985); filter:brightness(1.28)}
-.sg-a.flash{filter:brightness(1.6)}
-/* 键帽下沿的一道细线：按压感 + 「贴在面板上」的实感 */
-.sg-a::after{
-  content:''; position:absolute; left:14px; right:14px; bottom:5px; height:1px;
-  background:currentColor; opacity:.18;
-}
-.sg-a{position:relative}
 
-/* ---------- 菜单：底座右上角的小胶囊（低频键全收进去） ---------- */
-.sg-menu{
-  position:absolute; right:14px; top:10px;
-  display:flex; align-items:center; gap:8px; pointer-events:none;
-}
-.sg-fab, .sg-back{
-  height:32px; flex:0 0 auto; border-radius:11px; cursor:pointer;
-  display:flex; align-items:center; justify-content:center; padding:0 12px;
-  font-family:inherit; font-size:12.5px; line-height:1;
-  -webkit-tap-highlight-color:transparent; touch-action:manipulation;
-}
-.sg-fab{
-  pointer-events:auto; border:1px solid var(--sg-line);
-  background:rgba(18,25,40,.9); color:#bcd0e6;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.06);
-}
-.sg-back{
-  border:1px solid rgba(63,216,255,.55); background:rgba(63,216,255,.16); color:#dff6ff;
-  box-shadow:0 0 16px -8px rgba(63,216,255,.8);
-}
-.sg-fab.on{border-color:rgba(63,216,255,.55); color:#dff6ff}
-.sg-fab:active, .sg-back:active{transform:scale(.95)}
-
-/* 菜单抽屉：从底座右上方展开（不挡地图，也不遮住摇杆和两个大键） */
-.sg-veil{position:absolute; inset:0; background:rgba(3,6,12,.55); pointer-events:auto;
+/* ---------- 菜单抽屉：从右上角展开（唯一会浮在地图上的"面"） ---------- */
+.sg-veil{position:absolute; inset:0; background:rgba(3,6,12,.5); pointer-events:auto;
   animation:sgFade .16s ease-out}
 @keyframes sgFade{from{opacity:0} to{opacity:1}}
 .sg-panel{
-  position:absolute; right:14px; bottom:calc(var(--sg-deck) + 10px);
-  width:min(330px, 88vw); max-height:min(56vh, 440px); overflow-y:auto; pointer-events:auto;
-  padding:10px 12px 12px; border-radius:16px;
-  background:linear-gradient(180deg, rgba(15,21,34,.98), rgba(9,13,22,.98));
+  position:absolute; right:8px; top:calc(var(--sg-top) + var(--sg-hud) + 6px);
+  width:min(330px, 90vw); max-height:min(58vh, 440px); overflow-y:auto; pointer-events:auto;
+  padding:10px 12px 12px; border-radius:14px;
+  background:linear-gradient(180deg, rgba(15,21,34,.97), rgba(9,13,22,.97));
   border:1px solid var(--sg-line);
   box-shadow:0 24px 60px -24px #000, inset 0 1px 0 rgba(255,255,255,.05);
   backdrop-filter:blur(16px) saturate(140%); -webkit-backdrop-filter:blur(16px) saturate(140%);
@@ -486,15 +432,9 @@ ul.items li.night .x{color:#b9c5d8}
 .sg-panel .tip{font-size:10.5px; line-height:1.7; color:#6f8098; margin-top:2px}
 .sg-panel .tip b{color:#9fb4cc; font-weight:600}
 .sg-warn{
-  position:absolute; left:10px; right:10px; top:calc(var(--sg-top) + var(--sg-hud) + 6px);
+  position:absolute; left:8px; right:8px; top:calc(var(--sg-top) + var(--sg-hud) + 5px);
   padding:6px 10px; border-radius:10px; font-size:11.5px; line-height:1.5;
-  color:#ffd9dc; background:rgba(40,12,16,.92); border-left:2px solid #ff6b7a;
-}
-.sg-imm{
-  position:absolute; left:14px; bottom:var(--sg-bot); pointer-events:auto;
-  font-family:inherit; font-size:11.5px; padding:9px 13px; border-radius:999px; cursor:pointer;
-  border:1px solid var(--sg-line); background:rgba(18,25,40,.92); color:#9fb4cc;
-  -webkit-tap-highlight-color:transparent;
+  color:#ffd9dc; background:rgba(40,12,16,.9); border-left:2px solid #ff6b7a;
 }
 
 /* 底部安全区之外的浮层：构建自检提示（比所有视图都高，但低于密码门） */
@@ -2068,7 +2008,7 @@ body{ height:var(--vh) }
    ===================================================================== */
 const $ = id => document.getElementById(id);
 const IS_DEPLOY = true;
-const APP_BUILD = '10-02 04:19·70199f';     // 构建时替换成时间戳；直接开模板时保持占位符 = 不自检
+const APP_BUILD = '10-02 04:32·7c4733';     // 构建时替换成时间戳；直接开模板时保持占位符 = 不自检
 const STORE_KEY = 'saku_pw';
 const WORLD_START = {
   date:  new Date(2026, 8, 19, 0, 0, 0),
@@ -2708,10 +2648,10 @@ function showView(id, originEl){
        两边都必须**同源**，否则壳注不进按键、也读不到游戏状态（信息条全空）。
        本地版读 /game/space.html；线上版随包带一份 space.html（build_home.py 会拷）。
        带 ?log=1：宿主是手机，底部日志条压到 1 行（正好落进底部留白里），省下的行全给地图。 */
-    /* 底部日志条行数按屏幕高度给：底座占掉约 1/3，剩下的行数要留给地图。
-       这一条也是「日志向下延伸、不留大片空白」的抓手：行数给够，日志就占满地图下面那段。 */
-    var lr = (window.innerHeight >= 860) ? 4 : (window.innerHeight >= 700 ? 3 : 2);
-    var ssrc = (IS_DEPLOY ? 'space.html' : '/game/space.html') + '?log=' + lr;
+    /* ?log=0：游戏自己那条底部日志**整块不画**（壳画在顶部浮层里）。
+       不关掉的话它会贴在屏幕最底，正好被右下角的按键压住，看着像坏了。
+       关掉之后地图还多出「分隔线 + N 行」。 */
+    var ssrc = (IS_DEPLOY ? 'space.html' : '/game/space.html') + '?log=0';
     /* 手机默认只算出 9px 字号，太瞎眼 —— 第一次打开就给个适合手机的起手值。
        用户自己调过之后（localStorage 里已有）就不再覆盖。 */
     if(!IS_DEPLOY){
@@ -2730,7 +2670,7 @@ function showView(id, originEl){
     SPACE_MENU = false;
     SPACE_INFO = spaceInfoGet();       // 默认 false = 状态栏收起，地图最大化
     SPACE_HIDE = sgKeysGet();
-    SG_HINT = '';
+    SG_HINT = ''; SG_SEEN = -1; SG_LAST_AT = 0;
     /* 手机壳：?log=1 让游戏把底部日志条压到 1 行（那一行正好落在底部留白里），
        腾出来的行数全给地图。游戏不认这个参数也没有副作用。 */
     body.innerHTML = '<div class="game-shell space">'
@@ -2782,19 +2722,17 @@ const SG_MENU_GROUPS = [
      ring 摇杆画出来的圆 ——小：满屏 ASCII 地图，少盖一块是一块
      ok   确认键（右下落点）· act 交互键 */
 const SG_SIZE = {
-  deck:[168, 0.30, 264],   /* 底部控制底座高度（按屏高分比算） */
-  hit :[120, 0.36, 152],   /* 摇杆热区（透明，拇指拖动范围） */
-  ring:[ 96, 0.29, 124],   /* 摇杆画出来的圆 */
-  padW:[ 92, 0.28, 112],   /* 右侧按钮列宽（两个键同宽、右边缘对齐） */
-  ok  :[ 54, 0.16,  64],   /* 确认键高（主键，最右下角） */
-  act :[ 48, 0.145, 58],   /* 交互键高（副键，确认正上方） */
-  gap :[  8, 0.022, 12],   /* 两键之间的缝 */
-};
-let SPACE_KEY_OK = null, SPACE_ZOOM = null;
+  pad :[ 38, 0.108, 46],   /* 十字键每一格的边长（3 格 + 2 缝 = 整个十字） */
+  gap :[  4, 0.012,  6],   /* 十字键格与格之间的缝 */
+  key :[ 52, 0.150, 62],   /* 右下两个按键的边长 —— 两个必须一样大 */
+  kgap:[  9, 0.024, 13],   /* 两个按键之间的缝 */
+};let SPACE_KEY_OK = null, SPACE_ZOOM = null;
 let SPACE_INFO = false;        // 游戏左下角状态栏是否展开；手机默认收起，见 spaceInfoSet
 let SPACE_MENU = false;        // 右上角菜单抽屉是否打开
 let SPACE_HIDE = false;        // 沉浸模式：收起摇杆和动作键
 let SG_TIMER = null, SG_HINT = '';
+let SG_SEEN = -1, SG_LAST_AT = 0;
+const SG_LOG_SKIP = {dim:1};   // 走一步记一条「赶路 1 分钟」，浮层不显示这类
 const SG_DEAD = 0.26;          // 摇杆死区（半径比例）：中心这一圈不触发方向，防误触
 const SG_RPT_FIRST = 240, SG_RPT_NEXT = 135;   // 按住不放的连走节奏（毫秒）
 
@@ -2945,12 +2883,10 @@ function stickDir(dx, dy, r){
 }
 function bindStick(el){
   var rect = null, cx = 0, cy = 0, r = 1, cur = null, pid = null, t1 = null, t2 = null;
-  var knob = el.querySelector('.knob');
-  var ring = el.querySelector('.sg-ring');
-  var chevs = el.querySelectorAll('.chev');
+  var keys = el.querySelectorAll('.dkey');
 
   function lit(dir){
-    Array.prototype.forEach.call(chevs, function(c){
+    Array.prototype.forEach.call(keys, function(c){
       c.classList.toggle('lit', !!dir && c.getAttribute('data-d') === dir);
     });
   }
@@ -2960,7 +2896,7 @@ function bindStick(el){
     if(SPACE_KEY_OK !== ok){ SPACE_KEY_OK = ok; sgWarn(); }
     if(ok && navigator.vibrate) { try{ navigator.vibrate(6); }catch(e){} }
   }
-  function wait(){                       // 按住不放：先等一下再连走，像真摇杆
+  function wait(){                       // 按住不放：先等一下再连走，像真十字键
     stopRepeat();
     t1 = setTimeout(function(){
       t2 = setInterval(function(){ if(cur) fire(cur); }, SG_RPT_NEXT);
@@ -2972,33 +2908,19 @@ function bindStick(el){
     lit(dir);
     if(dir){ fire(dir); wait(); } else stopRepeat();
   }
-  function move(tx, ty){
-    var dx = tx - cx, dy = ty - cy;
-    setDir(stickDir(dx, dy, r));
-    /* 摇杆头跟着拇指走，但不出圈（视觉上给足反馈，算法上仍按整体半径判方向） */
-    var d = Math.sqrt(dx * dx + dy * dy), k = Math.min(1, d / (r || 1));
-    var a = Math.atan2(dy, dx), lim = r * 0.30;
-    knob.style.setProperty('--kx', (Math.cos(a) * lim * k).toFixed(1) + 'px');
-    knob.style.setProperty('--ky', (Math.sin(a) * lim * k).toFixed(1) + 'px');
-  }
   function reset(){
     setDir(null); pid = null; rect = null;
-    el.classList.remove('on');
-    knob.style.setProperty('--kx', '0px');
-    knob.style.setProperty('--ky', '0px');
   }
   function begin(tx, ty){
     rect = el.getBoundingClientRect();
-    var w = rect.width || el.offsetWidth || 132;
+    var w = rect.width || el.offsetWidth || 124;
     cx = rect.left + (rect.width || w) / 2;
     cy = rect.top + (rect.height || w) / 2;
-    /* 死区按**看得见的那个圆**算，不按热区 —— 热区比圆大一圈是给拇指拖的余地，
-       不该让「要推多远才有反应」也跟着变大。 */
-    var rw = 0;
-    try{ rw = ring ? ring.getBoundingClientRect().width : 0; }catch(e){ rw = 0; }
-    r = (rw || w) / 2;
-    el.classList.add('on');
+    r = w / 2;                           // 死区按整个十字算：中心那块就是「不推」
     move(tx, ty);
+  }
+  function move(tx, ty){
+    setDir(stickDir(tx - cx, ty - cy, r));
   }
   function evXY(ev, touch){
     var t = touch || (ev.touches && ev.touches[0]) || (ev.changedTouches && ev.changedTouches[0]) || ev;
@@ -3121,19 +3043,12 @@ function sgLayout(){
   var w = window.innerWidth || 360, h = window.innerHeight || 780;
   var short = Math.min(w, h);                     /* 横屏/分屏时控件也不会撑爆 */
   var of = function(spec, base){ return Math.round(Math.max(spec[0], Math.min(spec[2], (base || short) * spec[1]))); };
-  var top = sgSafeInset('top'), bot = Math.max(40, sgSafeInset('bot') + 16);
-  var px = { hit: of(SG_SIZE.hit), ring: of(SG_SIZE.ring), padW: of(SG_SIZE.padW),
-             ok: of(SG_SIZE.ok), act: of(SG_SIZE.act), gap: of(SG_SIZE.gap) };
-  /* 底座自己解一次方程：装得下摇杆和两个键，再加顶部那道横线和菜单胶囊。
-     宁可底座高一点，也不能让控件被 overflow:hidden 裁掉。 */
-  var need = Math.max(px.hit, px.ok + px.gap + px.act + 4) + bot + 40;
-  var deck = of(SG_SIZE.deck, h);
-  px.deck = Math.round(Math.min(Math.max(deck, need), Math.min(h * 0.42, SG_SIZE.deck[2] + 24)));
-  px.deck = Math.max(px.deck, need);
+  var top = sgSafeInset('top'), bot = Math.max(22, sgSafeInset('bot') + 10);
+  var px = { pad: of(SG_SIZE.pad), gap: of(SG_SIZE.gap), key: of(SG_SIZE.key), kgap: of(SG_SIZE.kgap) };
+  px.hit = px.pad * 3 + px.gap * 2;               /* 十字键的透明热区 = 整个十字 */
   var set = function(k, v){ bar.style.setProperty('--sg-' + k, v + 'px'); };
-  set('hit', px.hit); set('ring', px.ring); set('pad-w', px.padW);
-  set('ok', px.ok); set('act', px.act); set('gap', px.gap);
-  set('deck', px.deck); set('top', top); set('bot', bot);
+  set('pad', px.pad); set('gap', px.gap); set('key', px.key); set('kgap', px.kgap);
+  set('hit', px.hit); set('top', top); set('bot', bot);
   px.w = w; px.h = h; px.bottom = bot; px.top = top;
   return px;
 }
@@ -3179,14 +3094,51 @@ function spaceHudTick(){
     if(act.textContent !== lt2) act.textContent = lt2;
     act.setAttribute('data-k', st.modal && !st.dialogue ? 'Escape' : 'e');
   }
-  var back = q('.sg-back');
-  if(back) back.classList.toggle('hidden', !st.modal);
-  /* 游戏里的提示（world.hint）占的就是它自己那一行状态栏 —— 被信息条盖住了，
-     所以这里把整条信息条让给提示：提示优先，状态退场。 */
-  var hud = q('.sg-hud'), hintEl = q('.sg-hint');
-  var hinting = !!st.hint;
-  if(hud && hud.classList.contains('hinting') !== hinting) hud.classList.toggle('hinting', hinting);
-  if(hintEl && st.hint !== SG_HINT){ SG_HINT = st.hint; hintEl.textContent = st.hint; }
+  sgLogTick(st);
+}
+
+/* ---------------- ② 短文本日志浮层 ----------------
+   游戏自己那条底部日志已经关了（?log=0）—— 它会被右下角的按键压住。
+   日志改由壳画：信息条正下方，最多两条，半透明，停几秒自己退。
+   人物永远在地图正中，浮层在最上面，不会挡视线。
+   游戏里的 world.hint（它是画在游戏状态行上的，那一行被信息条盖住了）作为常驻第一条。 */
+function sgLogLine(text, cls){
+  var box = $('sgLog');
+  if(!box) return;
+  var n = document.createElement('div');
+  n.className = 'ln ' + (cls || '');
+  n.textContent = text;
+  box.appendChild(n);
+  while (box.children.length > 3) box.removeChild(box.children[0]);
+  setTimeout(function(){
+    n.classList.add('out');
+    setTimeout(function(){ if(n.parentNode) n.parentNode.removeChild(n); }, 480);
+  }, 4200);
+}
+function sgLogTick(st){
+  var box = $('sgLog');
+  if(!box || !st) return;
+  var h = box.querySelector('.ln.hint');
+  if(st.hint !== SG_HINT){
+    SG_HINT = st.hint;
+    if(!st.hint){ if(h) h.parentNode.removeChild(h); }
+    else if(h) h.textContent = st.hint;
+    else { h = document.createElement('div'); h.className = 'ln hint'; h.textContent = st.hint;
+           box.insertBefore(h, box.firstChild); }
+  }
+  var n = st.logs.length;
+  if(SG_SEEN < 0){ SG_SEEN = Math.max(0, n - 1); }      // 打开时不倒旧账，只浮最新那条
+  if(n <= SG_SEEN){ SG_SEEN = Math.min(SG_SEEN, n); return; }
+  var now = Date.now();
+  for (var i = SG_SEEN; i < n; i++){
+    var e = st.logs[i];
+    if(!e || SG_LOG_SKIP[e.level]) continue;            // 「赶路 1 分钟」这种不上浮层
+    if(now - SG_LAST_AT < 300) continue;                // 8 倍速一口气刷屏时只留最新
+    SG_LAST_AT = now;
+    sgLogLine(String(e.text || ''), e.level === 'good' ? 'good' : e.level === 'warn' ? 'warn'
+              : e.level === 'danger' ? 'danger' : '');
+  }
+  SG_SEEN = n;
 }
 function sgSpeedCycle(){                 // 顶部胶囊：暂停 → 1x → 2x → 4x → 8x → 暂停
   var g = spaceGame();
@@ -3205,40 +3157,32 @@ function renderSpaceCmd(){
   var bar = $('spaceCmd');
   if(!bar) return;
   if(SPACE_ZOOM === null) SPACE_ZOOM = spaceZoomGet();
-  const mkChev = function(d, cls, ch){ return '<span class="chev ' + cls + '" data-d="' + d + '">' + ch + '</span>'; };
   bar.className = 'cmdbar sg' + (SPACE_HIDE ? ' hidekeys' : '');
   bar.innerHTML =
       '<div class="sg-hud" id="sgHud">'
     +   '<span class="sg-scene">◈ …</span>'
     +   '<span class="sg-pos"></span>'
-    +   '<span class="sg-hint" id="sgHint"></span>'
     +   '<span class="sg-hp"><span class="bar"><i style="width:100%"></i></span><span class="v"></span></span>'
     +   '<button class="sg-spd" data-spd="1">▶ 1x</button>'
     +   '<span class="sg-clock">--:--</span>'
-    +   '<span class="sg-day"></span>'
+    +   '<button class="sg-fab" data-menu="1" aria-label="菜单">≡</button>'
     + '</div>'
-    + '<div class="sg-deck" id="sgDeck">'
-    +   '<div class="sg-deckline"></div>'
-    +   '<div class="sg-menu">'
-    +     '<button class="sg-back hidden" data-k="Escape" aria-label="返回">← 返回</button>'
-    +     '<button class="sg-fab" data-menu="1" aria-label="菜单">≡ 菜单</button>'
-    +   '</div>'
-    +   '<div class="sg-stick" id="sgStick" aria-label="方向">'
-    +     '<div class="sg-ring">'
-    +       mkChev('ArrowUp', 'u', '▲') + mkChev('ArrowLeft', 'l', '◀')
-    +       mkChev('ArrowRight', 'r', '▶') + mkChev('ArrowDown', 'd', '▼')
-    +       '<span class="knob">✛</span>'
-    +     '</div>'
-    +   '</div>'
-    +   '<div class="sg-pad">'
-    +     '<button class="sg-a act" data-k="e">交互</button>'
-    +     '<button class="sg-a ok" data-k="Enter">确认</button>'
-    +   '</div>'
+    + '<div class="sg-log" id="sgLog"></div>'
+    + '<div class="sg-stick" id="sgStick" aria-label="方向">'
+    +   '<span class="dkey u" data-d="ArrowUp">▲</span>'
+    +   '<span class="dkey l" data-d="ArrowLeft">◀</span>'
+    +   '<span class="mid"></span>'
+    +   '<span class="dkey r" data-d="ArrowRight">▶</span>'
+    +   '<span class="dkey d" data-d="ArrowDown">▼</span>'
+    + '</div>'
+    + '<div class="sg-pad">'
+    +   '<button class="sg-a act" data-k="e">交互</button>'
+    +   '<button class="sg-a ok" data-k="Enter">确认</button>'
     + '</div>';
 
   sgLayout();
 
-  Array.prototype.forEach.call(bar.querySelectorAll('.sg-a, .sg-back'), function(b){
+  Array.prototype.forEach.call(bar.querySelectorAll('.sg-a'), function(b){
     bindCmdBtn(b, function(){ pressKey(b); });
   });
   bindCmdBtn(bar.querySelector('.sg-fab'), function(){
