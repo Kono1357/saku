@@ -2031,7 +2031,7 @@ body{ height:var(--vh) }
    ===================================================================== */
 const $ = id => document.getElementById(id);
 const IS_DEPLOY = true;
-const APP_BUILD = '10-02 05:26·0f7ac8';     // 构建时替换成时间戳；直接开模板时保持占位符 = 不自检
+const APP_BUILD = '10-02 05:31·e5d9eb';     // 构建时替换成时间戳；直接开模板时保持占位符 = 不自检
 const STORE_KEY = 'saku_pw';
 const WORLD_START = {
   date:  new Date(2026, 8, 19, 0, 0, 0),
@@ -2918,7 +2918,10 @@ function sgBlogTick(st){
   var info = sgRoomBottomPx();
   if(!info || info.tall){ box.style.display = 'none'; return; }
   box.style.display = '';
-  var H = window.innerHeight || 780;
+  /* 用操作层自己的高度，不是窗口高 —— 操作层是从「返回栏」下面开始的，
+     拿 window.innerHeight 会多算两行，顶行就被 overflow:hidden 裁掉了。 */
+  var barH = (box.parentNode && box.parentNode.clientHeight) || window.innerHeight || 780;
+  var H = barH;
   var top = Math.round(info.px) + 6;
   var bottom = 10;                                   /* 留出底部安全边 */
   box.style.top = top + 'px';
