@@ -235,55 +235,259 @@ ul.items li.night .x{color:#b9c5d8}
 .game-shell{position:absolute; inset:0; display:flex; flex-direction:column; z-index:1}
 .game-frame{flex:1; width:100%; border:0; background:#2e2822; display:block}
 
-/* ---------- 太空游戏的命令条 ----------
-   太空是键盘驱动的 roguelike：走和看能点，但交互、选项选择、菜单全绑在键上。
-   手机上没键盘 —— 所以这里给一套十字键 + 动作键，由外壳注入按键。 */
-.cmdbar{
-  flex:0 0 auto; display:flex; flex-direction:column; gap:7px;
-  padding:7px 9px calc(7px + var(--safe-bot)); border-top:2px solid #3a4459;
-  background:linear-gradient(0deg,#141a2a,#0d1220);
-  max-height:46vh; overflow-y:auto;
+/* ============================================================
+   太空游戏的操作层 —— 手机优先 · 赛博终端风
+   游戏本体是一整屏 iframe（键盘驱动的 roguelike）。这一层浮在它上面，
+   只做两件事：把「手」放上去（摇杆 / 确认 / 交互），把「眼睛」放上去
+   （顶部信息条 / 事件浮层 / 菜单）。
+   纵轴五段（9:16）：
+     ① 安全区 safe-top（刘海/状态栏，画面从这里往下才开始）
+     ② 顶部信息条 2 行高（正好盖住游戏自己的「标题行+状态行」，不浪费地图）
+     ③ 地图（全屏，控件之外的空隙全部可点 —— 点格子走过去）
+     ④ 操作区：摇杆 40vw + 确认/交互（拇指自然落点）
+     ⑤ 底部留白 ≥40px（避开系统手势条）
+   容器 pointer-events:none：控件之间的缝是给地图的，不挡点按。
+   ============================================================ */
+.game-shell.space{
+  --sg-top:0px;  --sg-top:env(safe-area-inset-top,0px);
+  --sg-bot:40px; --sg-bot:max(40px, calc(env(safe-area-inset-bottom,0px) + 18px));
+  --sg-stick:clamp(124px, 40vw, 156px);   /* 摇杆直径，拇指滑动行程 */
+  --sg-ok:clamp(74px, 24vw, 92px);        /* 确认键直径 */
+  --sg-act:clamp(64px, 21vw, 80px);       /* 交互键直径 */
+  --sg-hud:35px;                          /* 运行时按游戏实际行高改写（= 2 行） */
+  --sg-cyan:#3fd8ff; --sg-orange:#ff9a3c;
+  --sg-glass:rgba(9,13,22,.9); --sg-line:rgba(120,190,255,.18);
 }
-.cmdbar.folded{ padding:5px 9px calc(5px + var(--safe-bot)) }
-.cmdbar .cmdrow{display:flex; gap:6px; flex-wrap:wrap; align-items:center}
+/* 画面整体下移到安全区之下；信息条再盖住游戏自己的前两行 */
+.game-shell.space .game-frame{position:absolute; left:0; right:0; top:var(--sg-top); bottom:0}
 
-/* 字号条（常驻在最上面） */
-.cmdzoom{display:flex; gap:6px; align-items:center; font-size:11.5px; color:var(--dim2)}
-.cmdzoom .zv{min-width:44px; text-align:center; color:var(--accent); font-size:12.5px; font-weight:700}
-.cmdzoom .fold{margin-left:auto}
-
-/* 十字键 */
-.dpad{
-  flex:0 0 auto; display:grid; gap:4px;
-  grid-template-columns:repeat(3,42px); grid-template-rows:repeat(3,42px);
+.cmdbar.sg{
+  position:absolute; inset:0; z-index:10; pointer-events:none;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC",sans-serif;
+  -webkit-user-select:none; user-select:none;
 }
-.dpad button{
-  font-family:inherit; font-size:17px; line-height:1; cursor:pointer;
-  border:1.5px solid #3a4459; border-radius:10px; background:#1b2338; color:var(--fg);
-  box-shadow:1.5px 1.5px 0 rgba(0,0,0,.45); padding:0;
+.cmdbar.sg.hidekeys .sg-stick, .cmdbar.sg.hidekeys .sg-acts{display:none}
+.cmdbar.sg .hidden{display:none !important}
+/* 层级（都在操作层内部）：摇杆/动作键 1 < 信息条/浮层 2 < 警告 3 < 遮罩 5 < 抽屉 6 < 菜单按钮 7
+   —— 菜单一开，遮罩盖住摇杆（避免「菜单开着还能走」），菜单按钮仍露在最上面好关。 */
+.cmdbar.sg .sg-stick, .cmdbar.sg .sg-acts, .cmdbar.sg .sg-imm{z-index:1}
+.cmdbar.sg .sg-hud, .cmdbar.sg .sg-log{z-index:2}
+.cmdbar.sg .sg-warn{z-index:3}
+.cmdbar.sg .sg-veil{z-index:5}
+.cmdbar.sg .sg-panel{z-index:6}
+.cmdbar.sg .sg-menu{z-index:7}
+
+/* ---------- ② 顶部信息条：地图状态 + 速度 + 时间 ---------- */
+.sg-hud{
+  position:absolute; left:0; right:0; top:var(--sg-top); height:var(--sg-hud);
+  display:flex; align-items:center; gap:6px; padding:0 8px;
+  pointer-events:auto; overflow:hidden;
+  background:linear-gradient(180deg, rgba(9,13,22,.97), rgba(9,13,22,.87));
+  border-bottom:1px solid var(--sg-line);
+  box-shadow:0 1px 0 rgba(63,216,255,.10), 0 8px 20px -14px #000;
+  font-size:12.5px; color:#c7d6ea;
+}
+.sg-hud .sg-scene{
+  color:#ffd9a8; font-weight:600; max-width:8em;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.sg-hud .sg-pos{color:#7f93b0; font-family:ui-monospace,Consolas,monospace; font-size:11px}
+.sg-hud .sg-hp{display:flex; align-items:center; gap:5px; margin-left:auto;
+  color:#9fd8b4; font-family:ui-monospace,Consolas,monospace; font-size:11.5px}
+.sg-hud .sg-hp .bar{display:block; width:36px; height:4px; border-radius:2px;
+  background:rgba(255,255,255,.15); overflow:hidden}
+.sg-hud .sg-hp .bar i{display:block; height:100%; border-radius:2px;
+  background:linear-gradient(90deg,#3fd8ff,#5ce6a0); transition:width .25s}
+.sg-hud .sg-hp.low{color:#ff9d9d}
+.sg-hud .sg-hp.low .bar i{background:linear-gradient(90deg,#ff9a3c,#ff6b7a)}
+/* 速度胶囊：点一下就换档（1→2→4→8→暂停） */
+.sg-spd{
+  flex:0 0 auto; font-family:inherit; font-size:11px; line-height:1; cursor:pointer;
+  padding:4px 8px; border-radius:999px;
+  border:1px solid rgba(63,216,255,.32); background:rgba(63,216,255,.10);
+  color:#bfeaff; -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+}
+.sg-spd.paused{border-color:rgba(255,154,60,.45); background:rgba(255,154,60,.12); color:#ffd9a8}
+.sg-spd:active{filter:brightness(1.3)}
+.sg-hud .sg-clock{
+  flex:0 0 auto; font-family:ui-monospace,Consolas,monospace; font-size:15px; font-weight:700;
+  color:#eaf7ff; letter-spacing:.5px; text-shadow:0 0 10px rgba(63,216,255,.5);
+}
+.sg-hud .sg-day{color:#6f8098; font-size:10.5px; font-family:ui-monospace,Consolas,monospace}
+
+/* ---------- ⑤ 事件浮层：新日志 / 提示，浮上来停几秒自己退 ---------- */
+.sg-log{
+  position:absolute; left:8px; right:58px; top:calc(var(--sg-top) + var(--sg-hud) + 6px);
+  display:flex; flex-direction:column; gap:4px; pointer-events:none;
+}
+.sg-log .ln{
+  align-self:flex-start; max-width:100%; padding:5px 10px; border-radius:10px;
+  background:rgba(9,13,22,.88); border-left:2px solid var(--sg-cyan);
+  font-size:12.5px; line-height:1.45; color:#d7e6f7;
+  box-shadow:0 8px 18px -12px #000;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  animation:sgIn .18s ease-out;
+}
+.sg-log .ln.good{border-left-color:#5ce6a0}
+.sg-log .ln.warn{border-left-color:#ffcf6b}
+.sg-log .ln.danger{border-left-color:#ff6b7a; color:#ffd9dc}
+.sg-log .ln.hint{border-left-color:var(--sg-orange); color:#ffe6c9; background:rgba(28,18,8,.9)}
+.sg-log .ln.out{animation:sgOut .5s ease-in forwards}
+@keyframes sgIn{from{opacity:0; transform:translateY(-6px)} to{opacity:1; transform:none}}
+@keyframes sgOut{to{opacity:0; transform:translateY(-4px)}}
+
+/* ---------- ④ 右上角：菜单（低频键全收进去）+ 上下文返回键 ---------- */
+.sg-menu{
+  position:absolute; right:10px; top:calc(var(--sg-top) + var(--sg-hud) + 8px);
+  display:flex; gap:8px; pointer-events:none;
+}
+.sg-fab, .sg-back{
+  width:42px; height:42px; flex:0 0 auto; border-radius:13px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; padding:0;
+  font-family:inherit; font-size:17px; line-height:1;
+  -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+  backdrop-filter:blur(10px) saturate(130%); -webkit-backdrop-filter:blur(10px) saturate(130%);
+}
+.sg-fab{
+  pointer-events:auto; border:1px solid var(--sg-line);
+  background:rgba(9,13,22,.82); color:#bcd0e6;
+  box-shadow:0 10px 24px -14px #000, inset 0 1px 0 rgba(255,255,255,.06);
+}
+.sg-back{
+  border:1px solid rgba(63,216,255,.55); background:rgba(63,216,255,.14); color:#dff6ff;
+  box-shadow:0 0 18px -8px rgba(63,216,255,.7), inset 0 1px 0 rgba(255,255,255,.08);
+}
+.sg-fab.on{border-color:rgba(63,216,255,.55); color:#dff6ff}
+.sg-fab:active, .sg-back:active{transform:scale(.94)}
+
+/* 菜单抽屉：贴着右上角往下展开，不占底部操作区 */
+.sg-veil{position:absolute; inset:0; background:rgba(3,6,12,.5); pointer-events:auto;
+  animation:sgFade .16s ease-out}
+@keyframes sgFade{from{opacity:0} to{opacity:1}}
+.sg-panel{
+  position:absolute; right:10px; top:calc(var(--sg-top) + var(--sg-hud) + 58px);
+  width:min(330px, 88vw); max-height:min(62vh, 460px); overflow-y:auto; pointer-events:auto;
+  padding:10px 12px 12px; border-radius:16px;
+  background:linear-gradient(180deg, rgba(15,21,34,.97), rgba(9,13,22,.97));
+  border:1px solid var(--sg-line);
+  box-shadow:0 24px 60px -24px #000, inset 0 1px 0 rgba(255,255,255,.05);
+  backdrop-filter:blur(16px) saturate(140%); -webkit-backdrop-filter:blur(16px) saturate(140%);
+  animation:sgDrop .18s cubic-bezier(.2,.9,.3,1);
+}
+@keyframes sgDrop{from{opacity:0; transform:translateY(-8px)} to{opacity:1; transform:none}}
+.sg-panel .gp{margin-bottom:9px}
+.sg-panel .gp:last-child{margin-bottom:0}
+.sg-panel .gp-t{
+  font-size:10.5px; letter-spacing:2px; color:#5f7089; margin:0 0 6px 2px;
+}
+.sg-panel .gp-b{display:grid; grid-template-columns:repeat(auto-fill,minmax(88px,1fr)); gap:7px}
+.sg-panel button{
+  font-family:inherit; font-size:12.5px; height:42px; cursor:pointer; padding:0 6px;
+  border:1px solid var(--sg-line); border-radius:11px;
+  background:rgba(255,255,255,.045); color:#d3e0f0; white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis;
   -webkit-tap-highlight-color:transparent; touch-action:manipulation;
 }
-.dpad button:active{transform:translateY(1px); box-shadow:none; background:#2a3550}
-.dpad .mid{ border-color:var(--accent); color:#ffe08c; background:rgba(201,185,143,.16); font-size:13px }
-.dpad .sp{ visibility:hidden }
+.sg-panel button:active{background:rgba(63,216,255,.18); border-color:rgba(63,216,255,.5)}
+.sg-panel button.on{border-color:rgba(63,216,255,.55); color:#dff6ff; background:rgba(63,216,255,.14)}
+.sg-panel .gp-b .wide{grid-column:1 / -1}
+.sg-panel .tip{font-size:10.5px; line-height:1.7; color:#6f8098; margin-top:2px}
+.sg-panel .tip b{color:#9fb4cc; font-weight:600}
+.sg-warn{
+  position:absolute; left:8px; right:58px; top:calc(var(--sg-top) + var(--sg-hud) + 6px);
+  padding:6px 10px; border-radius:10px; font-size:11.5px; line-height:1.5;
+  color:#ffd9dc; background:rgba(40,12,16,.9); border-left:2px solid #ff6b7a;
+}
 
-/* 动作键 */
-.cmdacts{flex:1 1 auto; display:flex; flex-direction:column; gap:6px; min-width:150px}
-.cmdkey{
-  font-family:inherit; font-size:13px; padding:9px 11px; cursor:pointer;
-  border:1.5px solid #3a4459; border-radius:9px; background:#1b2338; color:var(--fg);
-  box-shadow:1.5px 1.5px 0 rgba(0,0,0,.45); white-space:nowrap; flex:1 1 auto;
+/* ---------- ④ 左下角：虚拟摇杆（按住可滑、松手即停） ---------- */
+.sg-stick{
+  position:absolute; left:16px; bottom:var(--sg-bot);
+  width:var(--sg-stick); height:var(--sg-stick); border-radius:50%;
+  pointer-events:auto; touch-action:none;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(63,216,255,.09), rgba(63,216,255,0) 64%),
+    radial-gradient(circle at 50% 26%, rgba(255,255,255,.055), rgba(0,0,0,0) 72%),
+    rgba(9,13,22,.66);
+  border:1px solid var(--sg-line);
+  backdrop-filter:blur(10px) saturate(130%); -webkit-backdrop-filter:blur(10px) saturate(130%);
+  box-shadow:inset 0 0 26px -8px rgba(63,216,255,.3), 0 10px 26px -14px #000;
+  transition:border-color .16s, box-shadow .16s;
+}
+.sg-stick.on{
+  border-color:rgba(63,216,255,.5);
+  box-shadow:inset 0 0 30px -6px rgba(63,216,255,.42), 0 0 24px -8px rgba(63,216,255,.55);
+}
+.sg-stick .chev{
+  position:absolute; width:36px; height:36px; border-radius:11px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:13px; color:#7d93ad; background:rgba(255,255,255,.045);
+  border:1px solid rgba(120,190,255,.14);
+  transition:background .1s, color .1s, box-shadow .1s;
+}
+.sg-stick .chev.u{left:50%; top:5px;    transform:translateX(-50%)}
+.sg-stick .chev.d{left:50%; bottom:5px; transform:translateX(-50%)}
+.sg-stick .chev.l{left:5px;  top:50%;    transform:translateY(-50%)}
+.sg-stick .chev.r{right:5px; top:50%;    transform:translateY(-50%)}
+.sg-stick .chev.lit{
+  color:#04121a; background:var(--sg-cyan); border-color:var(--sg-cyan);
+  box-shadow:0 0 16px -2px rgba(63,216,255,.75);
+}
+.sg-stick .knob{
+  position:absolute; left:50%; top:50%; width:34%; height:34%; border-radius:50%;
+  transform:translate(-50%,-50%) translate(var(--kx,0px), var(--ky,0px));
+  display:flex; align-items:center; justify-content:center;
+  background:radial-gradient(circle at 38% 32%, #2c3c56, #121a28 72%);
+  border:1px solid rgba(160,200,255,.3); color:#8fb4d8; font-size:12px;
+  box-shadow:0 4px 12px -6px #000, inset 0 1px 0 rgba(255,255,255,.09);
+}
+.sg-stick.on .knob{border-color:rgba(63,216,255,.7); color:#dff6ff}
+
+/* ---------- ④ 右下角：确认 / 交互（两个核心大键） ---------- */
+.sg-acts{
+  position:absolute; right:16px; bottom:var(--sg-bot);
+  display:flex; flex-direction:column; align-items:flex-end; gap:10px; pointer-events:none;
+}
+.sg-a{
+  pointer-events:auto; border-radius:50%; padding:0; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  font-family:inherit; font-weight:700; letter-spacing:1px;
+  -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+  backdrop-filter:blur(10px) saturate(130%); -webkit-backdrop-filter:blur(10px) saturate(130%);
+  transition:transform .1s, filter .1s;
+}
+.sg-a.ok{
+  width:var(--sg-ok); height:var(--sg-ok); font-size:16px; color:#fff3e2;
+  border:1.5px solid rgba(255,154,60,.75);
+  background:radial-gradient(circle at 38% 30%, rgba(255,154,60,.34), rgba(255,154,60,.09) 64%), rgba(9,13,22,.84);
+  box-shadow:0 0 24px -8px rgba(255,154,60,.7), inset 0 1px 0 rgba(255,255,255,.1), 0 10px 22px -14px #000;
+}
+.sg-a.act{
+  width:var(--sg-act); height:var(--sg-act); font-size:14px; color:#dff6ff; margin-right:18px;
+  border:1.5px solid rgba(63,216,255,.55);
+  background:radial-gradient(circle at 38% 30%, rgba(63,216,255,.3), rgba(63,216,255,.07) 64%), rgba(9,13,22,.84);
+  box-shadow:0 0 20px -8px rgba(63,216,255,.65), inset 0 1px 0 rgba(255,255,255,.09), 0 10px 22px -14px #000;
+}
+.sg-a:active{transform:scale(.93); filter:brightness(1.25)}
+.sg-a.flash{filter:brightness(1.6)}
+.sg-imm{
+  position:absolute; left:16px; bottom:var(--sg-bot); pointer-events:auto;
+  font-family:inherit; font-size:11.5px; padding:8px 12px; border-radius:999px; cursor:pointer;
+  border:1px solid var(--sg-line); background:rgba(9,13,22,.8); color:#9fb4cc;
+  -webkit-tap-highlight-color:transparent;
+}
+
+/* 底部安全区之外的浮层：构建自检提示（比所有视图都高，但低于密码门） */
+#buildPill{
+  position:fixed; left:50%; transform:translateX(-50%);
+  top:calc(var(--safe-top) + 8px); z-index:150; display:none;
+  align-items:center; padding:7px 14px; border-radius:999px; cursor:pointer;
+  font-family:inherit; font-size:12px; line-height:1.4; color:#ffe6c9;
+  background:rgba(38,23,8,.95); border:1px solid rgba(255,154,60,.6);
+  box-shadow:0 10px 24px -14px #000, 0 0 20px -8px rgba(255,154,60,.7);
   -webkit-tap-highlight-color:transparent; touch-action:manipulation;
 }
-.cmdkey:active{transform:translateY(1px); box-shadow:none}
-.cmdkey.ok{border-color:var(--accent); color:#ffe08c; background:rgba(201,185,143,.16)}
-.cmdkey.more{border-style:dashed; color:var(--dim)}
-/* 状态栏开关：默认收起(隐)是暗色，展开(显)才点亮 */
-.cmdkey.info{flex:0 0 auto; border-color:#455a75; color:#9db4cf}
-.cmdkey.info.on{border-color:var(--accent); color:#ffe08c; background:rgba(201,185,143,.16)}
-.cmdkey.flash{background:rgba(201,185,143,.4); border-color:var(--accent); color:#fff}
-.cmdwarn{font-size:11px; color:#e0908a; flex-basis:100%}
-.cmdnote{font-size:11px; color:var(--dim2); line-height:1.5}
+#buildPill.on{display:flex}
+#buildPill:active{transform:translateX(-50%) scale(.96)}
 
 /* 返回按钮：足够显眼、可点、永远压在内容上面 */
 .view-bar{position:relative; z-index:20}
@@ -1829,6 +2033,10 @@ body{ height:var(--vh) }
   <div class="view-body" id="viewBody"></div>
 </div>
 
+<!-- 构建自检：手机上经常「我改了，但你还开着旧页面」。回到前台时问一次服务器，
+     版本对不上就浮这一条，点一下直接刷新（取不到就安静待着）。 -->
+<button id="buildPill" title="刷新到最新版本"></button>
+
 <script src="saku-data.enc.js"></script>
 <script src="saku-ascii.enc.js"></script>
 <script src="saku-engine.enc.js"></script>
@@ -1839,6 +2047,7 @@ body{ height:var(--vh) }
    ===================================================================== */
 const $ = id => document.getElementById(id);
 const IS_DEPLOY = true;
+const APP_BUILD = '10-02 03:34·eaaee3';     // 构建时替换成时间戳；直接开模板时保持占位符 = 不自检
 const STORE_KEY = 'saku_pw';
 const WORLD_START = {
   date:  new Date(2026, 8, 19, 0, 0, 0),
@@ -2475,10 +2684,10 @@ function showView(id, originEl){
   }
   else if(id === 'space'){
     /* 太空游戏是一个自包含单文件，直接装进 iframe。
-       本地版读 /game/space.html；线上版暂时挂公开地址（命令条要等正式打包才生效）。 */
-    var ssrc = IS_DEPLOY
-      ? 'https://kono1357.github.io/space-game/space-text.html'
-      : '/game/space.html';
+       两边都必须**同源**，否则壳注不进按键、也读不到游戏状态（信息条全空）。
+       本地版读 /game/space.html；线上版随包带一份 space.html（build_home.py 会拷）。
+       带 ?log=1：宿主是手机，底部日志条压到 1 行（正好落进底部留白里），省下的行全给地图。 */
+    var ssrc = (IS_DEPLOY ? 'space.html' : '/game/space.html') + '?log=1';
     /* 手机默认只算出 9px 字号，太瞎眼 —— 第一次打开就给个适合手机的起手值。
        用户自己调过之后（localStorage 里已有）就不再覆盖。 */
     if(!IS_DEPLOY){
@@ -2492,14 +2701,17 @@ function showView(id, originEl){
         }
       }catch(e){}
     }
-    SPACE_FOLDED = false;
-    SPACE_MORE_OPEN = false;
     SPACE_KEY_OK = null;
     SPACE_ZOOM = null;
+    SPACE_MENU = false;
     SPACE_INFO = spaceInfoGet();       // 默认 false = 状态栏收起，地图最大化
-    body.innerHTML = '<div class="game-shell">'
+    SPACE_HIDE = sgKeysGet();
+    SG_SEEN = -1; SG_HINT = ''; SG_LAST_AT = 0;
+    /* 手机壳：?log=1 让游戏把底部日志条压到 1 行（那一行正好落在底部留白里），
+       腾出来的行数全给地图。游戏不认这个参数也没有副作用。 */
+    body.innerHTML = '<div class="game-shell space">'
       + '<iframe class="game-frame" id="spaceFrame" title="太空" src="' + ssrc + '"></iframe>'
-      + '<div class="cmdbar" id="spaceCmd"></div></div>';
+      + '<div class="cmdbar sg" id="spaceCmd"></div></div>';
     body.classList.add('short');
     renderSpaceCmd();
     /* 游戏本身是「信息栏默认展开」的，装载完替用户按一次 F4。
@@ -2518,26 +2730,35 @@ function showView(id, originEl){
   requestAnimationFrame(() => host.classList.add('on'));
 }
 /* ============================================================
-   太空游戏的命令条 —— 把按键注入 iframe
+   太空游戏的操作层 —— 把「手」和「眼睛」放在 iframe 上面
    iframe 是同源的（本地版同域；线上版 srcdoc 会继承主页面 origin），
-   所以可以直接在它的 window 上派发 KeyboardEvent。
+   所以既能在它的 window 上派发 KeyboardEvent，也能直接读游戏状态
+   （window.__space.game）来画顶部信息条和事件浮层 —— 不复制一份状态，
+   永远以游戏为准。
    ============================================================ */
-const SPACE_CMD_MAIN = [
-  {k:'Enter', t:'确认', cls:'ok'},
-  {k:'e',   t:'交互'},
-  {k:'g',   t:'星图'},
-  {k:'l',   t:'日志'},
-  {k:'m',   t:'任务'},
-  {k:'?',   t:'帮助'},
+/* 低频键全收进右上角菜单，底部只留「确认 / 交互」两个大键 */
+const SG_MENU_GROUPS = [
+  { t:'视图', items:[
+      {k:'g', t:'星图 G'}, {k:'l', t:'日志 L'}, {k:'m', t:'任务 M'},
+      {k:'Tab', t:'环顾 Tab'}, {k:'x', t:'查看 X'} ] },
+  { t:'时间', items:[
+      {k:'1', t:'暂停'}, {k:'2', t:'1x'}, {k:'3', t:'2x'}, {k:'4', t:'4x'}, {k:'5', t:'8x'} ] },
+  { t:'画面', items:[
+      {zoom:-1, t:'字号 −'}, {zoom:1, t:'字号 ＋'}, {k:'c', t:'彩色'},
+      {info:1, t:'信息栏'}, {keys:1, t:'收起按键'} ] },
+  { t:'系统', items:[
+      {k:'?', t:'帮助 ?'}, {k:'Escape', t:'返回 Esc'}, {k:'r', t:'重开 R'},
+      {k:'F3', t:'诊断 F3'}, {k:'F2', t:'mod F2'} ] },
 ];
-const SPACE_CMD_MORE = [
-  {k:'Tab', t:'环顾'}, {k:'x', t:'查看'}, {k:'c', t:'彩色'},
-  {k:'1', t:'1x'}, {k:'2', t:'2x'}, {k:'3', t:'4x'}, {k:'4', t:'8x'}, {k:'5', t:'暂停'},
-  {k:'F2', t:'mod'}, {k:'F3', t:'诊断'},
-  {k:'r', t:'重开'}, {k:'Escape', t:'关闭'},
-];
-let SPACE_MORE_OPEN = false, SPACE_FOLDED = false, SPACE_KEY_OK = null, SPACE_ZOOM = null;
-let SPACE_INFO = false;   // 游戏左下角状态栏是否展开；手机默认收起，见 spaceInfoSet
+let SPACE_KEY_OK = null, SPACE_ZOOM = null;
+let SPACE_INFO = false;        // 游戏左下角状态栏是否展开；手机默认收起，见 spaceInfoSet
+let SPACE_MENU = false;        // 右上角菜单抽屉是否打开
+let SPACE_HIDE = false;        // 沉浸模式：收起摇杆和动作键
+let SG_SEEN = -1, SG_LAST_AT = 0, SG_TIMER = null, SG_HINT = '';
+const SG_DEAD = 0.26;          // 摇杆死区（半径比例）：中心这一圈不触发方向，防误触
+const SG_RPT_FIRST = 240, SG_RPT_NEXT = 135;   // 按住不放的连走节奏（毫秒）
+const SG_LOG_SKIP = {dim:1};   // 走一步记一条「赶路 1 分钟」，浮层不显示这类
+
 
 /* 字号：游戏把 zoomBias 存在 localStorage.space_zoom，每 +1 就是字号 +1px。
    手机上默认算出来只有 9px，太小 —— 这里给一个适合手机的起手值。 */
@@ -2558,7 +2779,7 @@ function spaceZoomSet(v){
     var delta = v - cur;
     for(var i = 0; i < Math.abs(delta); i++) spaceKey(delta > 0 ? '+' : '-');
   }
-  renderSpaceCmd();
+  spaceHudTick();
 }
 
 /* 左下角那几行状态（位置/HP/速度/键位提示）在小窗口里太占地。
@@ -2585,9 +2806,9 @@ function spaceInfoSet(want){
   var real = spaceInfoReal();
   if(real !== want){                     // null（跨域/状态不明）也按一下，按错了再按回来即可
     var ok = spaceKey('F4');
-    if(!ok && SPACE_KEY_OK !== false){ SPACE_KEY_OK = false; renderSpaceCmd(); return; }
+    if(!ok && SPACE_KEY_OK !== false){ SPACE_KEY_OK = false; sgWarn(); return; }
   }
-  renderSpaceCmd();
+  spaceHudTick();
 }
 
 function spaceKey(k){
@@ -2610,76 +2831,384 @@ function bindCmdBtn(el, fn){
 }
 function pressKey(b){
   var ok = spaceKey(b.getAttribute('data-k'));
-  if(SPACE_KEY_OK !== ok){ SPACE_KEY_OK = ok; renderSpaceCmd(); }
+  if(SPACE_KEY_OK !== ok){ SPACE_KEY_OK = ok; sgWarn(); }
   if(ok){ sfx('click'); b.classList.add('flash');
           setTimeout(function(){ b.classList.remove('flash'); }, 160); }
   else sfx('deny');
 }
 
+/* ---------------- 读游戏状态（同源才读得到；跨域 → null，界面自动降级） ---------------- */
+function spaceGame(){
+  var f = document.getElementById('spaceFrame');
+  if(!f) return null;
+  try{
+    var w = f.contentWindow;
+    return (w && w.__space && w.__space.game) || null;
+  }catch(e){ return null; }
+}
+function sgNum(v, d){ return (typeof v === 'number' && isFinite(v)) ? v : d; }
+function sgRowH(){                 // 游戏一行文字的实际像素高（信息条正好盖两行）
+  var f = document.getElementById('spaceFrame');
+  try{
+    var d = f && f.contentWindow && f.contentWindow.__space && f.contentWindow.__space.out &&
+            f.contentWindow.__space.out.diag;
+    return sgNum(d && d.cellH, 0);
+  }catch(e){ return 0; }
+}
+function sgClock(t){               // '年1 月1 日1 10:54' → { hm:'10:54', day:'1月1日' }
+  var m = /(\d{1,2}):(\d{2})\s*$/.exec(t || '');
+  var d = /月\s*(\d+)\s*日\s*(\d+)/.exec(t || '');
+  return {
+    hm: m ? ((m[1].length < 2 ? '0' : '') + m[1] + ':' + m[2]) : String(t || '').slice(-5),
+    day: d ? (d[1] + '月' + d[2] + '日') : ''
+  };
+}
+function spaceHostState(){
+  var g = spaceGame();
+  if(!g) return null;
+  try{
+    var p = g.world.player, stats = p.stats || {};
+    var hint = g.world.hint;
+    return {
+      scene: String(g.sceneName(p.scene)),
+      x: p.x, y: p.y,
+      hp: Math.round(sgNum(stats.hp, 0)), maxHp: Math.max(1, Math.round(sgNum(stats.maxHp, 10))),
+      clock: String(g.clockText ? g.clockText() : ''), day: sgNum(g.world.day, 1),
+      spd: String(g.speedLabel ? g.speedLabel() : ''), speed: sgNum(g.speed, 1),
+      galaxy: g.screenMode === 'galaxy',
+      modal: !!(g.ui && (g.ui.view || g.ui.dialogue || g.ui.reader)),
+      dialogue: !!(g.ui && g.ui.dialogue),
+      hint: (hint && g.world.tick < sgNum(g.world.hintUntil, 0)) ? String(hint) : '',
+      logs: (g.world && g.world.log) || []
+    };
+  }catch(e){ return null; }
+}
+
+/* ---------------- 事件浮层：新日志浮上来，停几秒自己退（不弹窗、不挡路） ---------------- */
+function sgLogLine(text, cls){
+  var box = $('sgLog');
+  if(!box) return;
+  var n = document.createElement('div');
+  n.className = 'ln ' + (cls || '');
+  n.textContent = text;
+  box.appendChild(n);
+  while (box.children.length > 3) box.removeChild(box.children[0]);
+  setTimeout(function(){
+    n.classList.add('out');
+    setTimeout(function(){ if(n.parentNode) n.parentNode.removeChild(n); }, 520);
+  }, 4400);
+}
+function sgLogTick(st){
+  var box = $('sgLog');
+  if(!box || !st) return;
+  /* 提示条（游戏里的 world.hint）：有就常驻在最上面，没了就撤 */
+  var h = box.querySelector('.ln.hint');
+  if(st.hint !== SG_HINT){
+    SG_HINT = st.hint;
+    if(!st.hint){ if(h) h.parentNode.removeChild(h); }
+    else if(h) h.textContent = st.hint;
+    else { h = document.createElement('div'); h.className = 'ln hint'; h.textContent = st.hint;
+           box.insertBefore(h, box.firstChild); }
+  }
+  /* 日志：只浮最新的，跳过「赶路 1 分钟」这种噪音 */
+  var n = st.logs.length;
+  if(SG_SEEN < 0){ SG_SEEN = n; return; }
+  if(n <= SG_SEEN) { SG_SEEN = Math.min(SG_SEEN, n); return; }
+  var now = Date.now();
+  for (var i = SG_SEEN; i < n; i++){
+    var e = st.logs[i];
+    if(!e || SG_LOG_SKIP[e.level]) continue;
+    if(now - SG_LAST_AT < 320) continue;            // 8 倍速下一口气刷屏 —— 只留最新
+    SG_LAST_AT = now;
+    sgLogLine(String(e.text || ''), e.level === 'good' ? 'good' : e.level === 'warn' ? 'warn'
+              : e.level === 'danger' ? 'danger' : '');
+  }
+  SG_SEEN = n;
+}
+function sgWarn(){
+  var bar = $('spaceCmd');
+  if(!bar) return;
+  var w = bar.querySelector('.sg-warn');
+  var need = (SPACE_KEY_OK === false);
+  if(need && !w){
+    w = document.createElement('div');
+    w.className = 'sg-warn';
+    w.textContent = '操作键暂时注不进游戏（线上版跨域）。画面仍可点着走／看，完整手机版等正式打包。';
+    bar.appendChild(w);
+  } else if(!need && w) w.parentNode.removeChild(w);
+}
+
+/* ---------------- 摇杆：纯方向映射（可单测）+ 按住连走 + 滑动换向 ---------------- */
+function stickDir(dx, dy, r){
+  if(!(r > 0)) r = 1;
+  if(Math.sqrt(dx * dx + dy * dy) < r * SG_DEAD) return null;
+  return Math.abs(dx) >= Math.abs(dy) ? (dx > 0 ? 'ArrowRight' : 'ArrowLeft')
+                                      : (dy > 0 ? 'ArrowDown' : 'ArrowUp');
+}
+function bindStick(el){
+  var rect = null, cx = 0, cy = 0, r = 1, cur = null, pid = null, t1 = null, t2 = null;
+  var knob = el.querySelector('.knob');
+  var chevs = el.querySelectorAll('.chev');
+
+  function lit(dir){
+    Array.prototype.forEach.call(chevs, function(c){
+      c.classList.toggle('lit', !!dir && c.getAttribute('data-d') === dir);
+    });
+  }
+  function stopRepeat(){ if(t1){ clearTimeout(t1); t1 = null; } if(t2){ clearInterval(t2); t2 = null; } }
+  function fire(dir){
+    var ok = spaceKey(dir);
+    if(SPACE_KEY_OK !== ok){ SPACE_KEY_OK = ok; sgWarn(); }
+    if(ok && navigator.vibrate) { try{ navigator.vibrate(6); }catch(e){} }
+  }
+  function wait(){                       // 按住不放：先等一下再连走，像真摇杆
+    stopRepeat();
+    t1 = setTimeout(function(){
+      t2 = setInterval(function(){ if(cur) fire(cur); }, SG_RPT_NEXT);
+    }, SG_RPT_FIRST);
+  }
+  function setDir(dir){
+    if(dir === cur) return;
+    cur = dir;
+    lit(dir);
+    if(dir){ fire(dir); wait(); } else stopRepeat();
+  }
+  function move(tx, ty){
+    var dx = tx - cx, dy = ty - cy;
+    setDir(stickDir(dx, dy, r));
+    /* 摇杆头跟着拇指走，但不出圈（视觉上给足反馈，算法上仍按整体半径判方向） */
+    var d = Math.sqrt(dx * dx + dy * dy), k = Math.min(1, d / (r || 1));
+    var a = Math.atan2(dy, dx), lim = r * 0.30;
+    knob.style.setProperty('--kx', (Math.cos(a) * lim * k).toFixed(1) + 'px');
+    knob.style.setProperty('--ky', (Math.sin(a) * lim * k).toFixed(1) + 'px');
+  }
+  function reset(){
+    setDir(null); pid = null; rect = null;
+    el.classList.remove('on');
+    knob.style.setProperty('--kx', '0px');
+    knob.style.setProperty('--ky', '0px');
+  }
+  function begin(tx, ty){
+    rect = el.getBoundingClientRect();
+    var w = rect.width || el.offsetWidth || 144;
+    cx = rect.left + (rect.width || w) / 2;
+    cy = rect.top + (rect.height || w) / 2;
+    r = w / 2;
+    el.classList.add('on');
+    move(tx, ty);
+  }
+  function evXY(ev, touch){
+    var t = touch || (ev.touches && ev.touches[0]) || (ev.changedTouches && ev.changedTouches[0]) || ev;
+    return [t.clientX, t.clientY];
+  }
+  if(window.PointerEvent){
+    el.addEventListener('pointerdown', function(ev){
+      if(pid !== null) return;                       // 第二根手指不接管
+      pid = ev.pointerId;
+      try{ el.setPointerCapture(pid); }catch(e){}
+      ev.preventDefault();
+      begin(ev.clientX, ev.clientY);
+    });
+    el.addEventListener('pointermove', function(ev){
+      if(ev.pointerId !== pid) return;
+      ev.preventDefault();
+      move(ev.clientX, ev.clientY);
+    });
+    ['pointerup','pointercancel'].forEach(function(t){
+      el.addEventListener(t, function(ev){ if(ev.pointerId === pid) reset(); });
+    });
+  } else {
+    el.addEventListener('touchstart', function(ev){
+      if(pid !== null) return;
+      pid = 1; ev.preventDefault();
+      var xy = evXY(ev); begin(xy[0], xy[1]);
+    }, {passive:false});
+    el.addEventListener('touchmove', function(ev){
+      ev.preventDefault();
+      var xy = evXY(ev); move(xy[0], xy[1]);
+    }, {passive:false});
+    ['touchend','touchcancel'].forEach(function(t){ el.addEventListener(t, reset); });
+  }
+}
+
+/* ---------------- 右上角菜单 ---------------- */
+function sgMenuHTML(){
+  return SG_MENU_GROUPS.map(function(gp){
+    var btns = gp.items.map(function(it){
+      var at = it.k ? ' data-k="' + it.k + '"'
+             : it.zoom ? ' data-zoom="' + it.zoom + '"'
+             : it.info ? ' data-info="1"'
+             : it.keys ? ' data-keys="1"' : '';
+      var on = (it.info && SPACE_INFO) || (it.keys && SPACE_HIDE) ? ' class="on"' : '';
+      var label = it.t;
+      if(it.zoom) label = it.t + ' ' + SPACE_ZOOM;
+      if(it.info) label = '信息栏 ' + (SPACE_INFO ? '显' : '隐');
+      if(it.keys) label = SPACE_HIDE ? '显示按键' : '收起按键';
+      return '<button' + on + at + '>' + label + '</button>';
+    }).join('');
+    return '<div class="gp"><div class="gp-t">' + gp.t + '</div><div class="gp-b">' + btns + '</div></div>';
+  }).join('')
+  + '<div class="tip">左下滑动 = 走路／选星系／选对话选项；右下 <b>确认</b> = 回车，'
+  + '<b>交互</b> = E（面板开着时变成 <b>返回</b>）。顶部胶囊点一下换速度。</div>'
+  + '<div class="tip" style="opacity:.55">本机构建 ' + APP_BUILD + '</div>';
+}
+function sgMenuSet(open){
+  SPACE_MENU = !!open;
+  var bar = $('spaceCmd');
+  if(!bar) return;
+  var old = bar.querySelector('.sg-veil');
+  var pan = bar.querySelector('.sg-panel');
+  var fab = bar.querySelector('.sg-fab');
+  if(old) old.parentNode.removeChild(old);
+  if(pan) pan.parentNode.removeChild(pan);
+  if(fab) fab.classList.toggle('on', SPACE_MENU);
+  if(!SPACE_MENU) return;
+  var veil = document.createElement('div');
+  veil.className = 'sg-veil'; veil.setAttribute('data-veil', '1');
+  bindCmdBtn(veil, function(){ sfx('closeapp'); sgMenuSet(false); });
+  var panel = document.createElement('div');
+  panel.className = 'sg-panel';
+  panel.innerHTML = sgMenuHTML();
+  var menu = bar.querySelector('.sg-menu');
+  bar.insertBefore(veil, menu);
+  bar.insertBefore(panel, menu);
+  Array.prototype.forEach.call(panel.querySelectorAll('button'), function(b){
+    bindCmdBtn(b, function(){
+      if(b.hasAttribute('data-k')){ pressKey(b); sgMenuSet(false); return; }
+      if(b.hasAttribute('data-zoom')){
+        spaceZoomSet(spaceZoomGet() + Number(b.getAttribute('data-zoom'))); sfx('click');
+        var z = panel.querySelector('button[data-zoom="-1"]');
+        if(z) z.textContent = '字号 − ' + SPACE_ZOOM;
+        var z2 = panel.querySelector('button[data-zoom="1"]');
+        if(z2) z2.textContent = '字号 ＋ ' + SPACE_ZOOM;
+        return;
+      }
+      if(b.hasAttribute('data-info')){ sfx('click'); spaceInfoSet(!SPACE_INFO); sgMenuSet(false); return; }
+      if(b.hasAttribute('data-keys')){ sfx('click'); sgKeysSet(!SPACE_HIDE); sgMenuSet(false); return; }
+    });
+  });
+}
+function sgKeysGet(){
+  try{ return localStorage.getItem('space_keys') === '0'; }catch(e){ return false; }
+}
+function sgKeysSet(hide){
+  SPACE_HIDE = !!hide;
+  try{ localStorage.setItem('space_keys', SPACE_HIDE ? '0' : '1'); }catch(e){}
+  var bar = $('spaceCmd');
+  if(bar) bar.classList.toggle('hidekeys', SPACE_HIDE);
+  var pill = bar && bar.querySelector('.sg-imm');
+  if(bar && SPACE_HIDE && !pill){
+    pill = document.createElement('button');
+    pill.className = 'sg-imm'; pill.textContent = '⌨ 显示按键';
+    bindCmdBtn(pill, function(){ sfx('click'); sgKeysSet(false); });
+    bar.appendChild(pill);
+  } else if(pill && !SPACE_HIDE) pill.parentNode.removeChild(pill);
+}
+
+/* ---------------- 顶部信息条刷新（每 250ms 一次，只改文本不重建节点） ---------------- */
+function spaceHudTick(){
+  var bar = $('spaceCmd');
+  if(!bar){ if(SG_TIMER){ clearInterval(SG_TIMER); SG_TIMER = null; } return; }
+  if(!$('sgHud')){ renderSpaceCmd(); return; }
+  /* 信息条高度 = 游戏两行的高度：正好盖住它自己的「标题行 + 状态行」，不多占地图 */
+  var rowH = sgRowH();
+  var hudH = rowH > 6 ? Math.round(rowH * 2) : 35;
+  hudH = Math.max(30, Math.min(64, hudH));
+  bar.style.setProperty('--sg-hud', hudH + 'px');
+
+  var st = spaceHostState();
+  if(!st){ sgWarn(); return; }
+  sgWarn();
+  var q = function(sel){ return bar.querySelector(sel); };
+  var set = function(sel, txt){ var n = q(sel); if(n && n.textContent !== txt) n.textContent = txt; };
+  set('.sg-scene', (st.galaxy ? '✦ ' : '◈ ') + st.scene);
+  set('.sg-pos', st.galaxy ? '星图' : '(' + st.x + ',' + st.y + ')');
+  var pct = Math.max(0, Math.min(100, Math.round(st.hp / st.maxHp * 100)));
+  var barEl = q('.sg-hp .bar i');
+  if(barEl){ var wpx = pct + '%'; if(barEl.style.width !== wpx) barEl.style.width = wpx; }
+  set('.sg-hp .v', st.hp + '/' + st.maxHp);
+  var hpBox = q('.sg-hp');
+  if(hpBox) hpBox.classList.toggle('low', pct <= 30);
+  var spd = q('.sg-spd');
+  if(spd){
+    var lt = st.spd || ((st.speed > 0 ? '▶ ' : '‖ ') + st.speed + 'x');
+    if(lt.charAt(0) !== '▶' && lt.charAt(0) !== '‖') lt = (st.speed > 0 ? '▶ ' : '‖ ') + lt;
+    if(spd.textContent !== lt) spd.textContent = lt;
+    spd.classList.toggle('paused', !(st.speed > 0));
+  }
+  var ck = sgClock(st.clock);
+  set('.sg-clock', ck.hm);
+  set('.sg-day', ck.day);
+  /* 面板开着时，键位跟着上下文变：「交互」在弹层里就是「返回」 */
+  var act = q('.sg-a.act');
+  if(act){
+    var lt2 = st.modal && !st.dialogue ? '返回' : '交互';
+    if(act.textContent !== lt2) act.textContent = lt2;
+    act.setAttribute('data-k', st.modal && !st.dialogue ? 'Escape' : 'e');
+  }
+  var back = q('.sg-back');
+  if(back) back.classList.toggle('hidden', !st.modal);
+  sgLogTick(st);
+}
+function sgSpeedCycle(){                 // 顶部胶囊：暂停 → 1x → 2x → 4x → 8x → 暂停
+  var g = spaceGame();
+  if(!g){ sfx('deny'); return; }
+  /* 键位是游戏定的：1 = 暂停，2-5 = 1x/2x/4x/8x（别记反，见 space-textshell 的 SPEEDS） */
+  var order = [0, 1, 2, 4, 8], key = ['1', '2', '3', '4', '5'];
+  var i = order.indexOf(sgNum(g.speed, 0));
+  if(i < 0) i = 0;
+  var next = order[(i + 1) % order.length];
+  spaceKey(key[order.indexOf(next)]);
+  sfx('click');
+  spaceHudTick();
+}
+
 function renderSpaceCmd(){
   var bar = $('spaceCmd');
   if(!bar) return;
-  if(SPACE_FOLDED){
-    bar.className = 'cmdbar folded';
-    bar.innerHTML = '<div class="cmdrow"><button class="cmdkey more" data-fold="1">⌨ 展开操作键</button>'
-      + '<span class="cmdnote">画面可以直接点：点空格走过去，点走不到的东西看一眼。</span></div>';
-    bindFold(bar);
-    return;
-  }
-  bar.className = 'cmdbar';
-  var mk = function(list){
-    return list.map(function(c){
-      return '<button class="cmdkey ' + (c.cls||'') + '" data-k="' + c.k + '">' + c.t + '</button>';
-    }).join('');
-  };
   if(SPACE_ZOOM === null) SPACE_ZOOM = spaceZoomGet();
-
+  const mkChev = function(d, cls, ch){ return '<span class="chev ' + cls + '" data-d="' + d + '">' + ch + '</span>'; };
+  bar.className = 'cmdbar sg' + (SPACE_HIDE ? ' hidekeys' : '');
+  bar.style.setProperty('--sg-hud', (sgRowH() > 6 ? Math.round(sgRowH() * 2) : 35) + 'px');
   bar.innerHTML =
-      '<div class="cmdrow">'
-    +   '<div class="dpad">'
-    +     '<button class="sp"></button><button data-k="ArrowUp">↑</button><button class="sp"></button>'
-    +     '<button data-k="ArrowLeft">←</button><button class="mid" data-k="Enter">确认</button><button data-k="ArrowRight">→</button>'
-    +     '<button class="sp"></button><button data-k="ArrowDown">↓</button><button class="sp"></button>'
-    +   '</div>'
-    +   '<div class="cmdacts">'
-    +     '<div class="cmdrow">' + mk(SPACE_CMD_MAIN) + '</div>'
-    +     '<div class="cmdrow">' + mk(SPACE_CMD_MORE.slice(0, SPACE_MORE_OPEN ? 99 : 0))
-    +       '<button class="cmdkey more" data-more="1">' + (SPACE_MORE_OPEN ? '收起 ▴' : '更多 ▾') + '</button></div>'
-    +     '<div class="cmdrow cmdzoom">'
-    +       '<span>字号</span>'
-    +       '<button class="cmdkey" data-zoom="-1">−</button>'
-    +       '<span class="zv">' + SPACE_ZOOM + '</span>'
-    +       '<button class="cmdkey" data-zoom="1">＋</button>'
-    +       '<button class="cmdkey info' + (SPACE_INFO ? ' on' : '') + '" data-info="1">状态 '
-    +         (SPACE_INFO ? '显' : '隐') + '</button>'
-    +       '<button class="cmdkey more fold" data-fold="1">收起 ▾</button>'
-    +     '</div>'
-    +     ((SPACE_KEY_OK === false) ? '<div class="cmdwarn">命令条暂时不可用：线上版跨域注不进按键。'
-    +       '画面仍可点着走／看，完整手机版等正式打包。</div>' : '')
-    +   '</div>'
+      '<div class="sg-hud" id="sgHud">'
+    +   '<span class="sg-scene">◈ …</span>'
+    +   '<span class="sg-pos"></span>'
+    +   '<span class="sg-hp"><span class="bar"><i style="width:100%"></i></span><span class="v"></span></span>'
+    +   '<button class="sg-spd" data-spd="1">▶ 1x</button>'
+    +   '<span class="sg-clock">--:--</span>'
+    +   '<span class="sg-day"></span>'
     + '</div>'
-    + (SPACE_MORE_OPEN ? '<div class="cmdnote">左手方向键 / 右手功能键。十字键在场景里是走路、在星图上是选星系、在对话里是选择；确认键就是回车；「星图」在地表与银河之间切换。</div>' : '');
+    + '<div class="sg-log" id="sgLog"></div>'
+    + '<div class="sg-menu">'
+    +   '<button class="sg-back hidden" data-k="Escape" aria-label="返回">✕</button>'
+    +   '<button class="sg-fab" data-menu="1" aria-label="菜单">≡</button>'
+    + '</div>'
+    + '<div class="sg-stick" id="sgStick" aria-label="方向">'
+    +   mkChev('ArrowUp', 'u', '▲') + mkChev('ArrowLeft', 'l', '◀')
+    +   mkChev('ArrowRight', 'r', '▶') + mkChev('ArrowDown', 'd', '▼')
+    +   '<span class="knob">✛</span>'
+    + '</div>'
+    + '<div class="sg-acts">'
+    +   '<button class="sg-a act" data-k="e">交互</button>'
+    +   '<button class="sg-a ok" data-k="Enter">确认</button>'
+    + '</div>';
 
-  Array.prototype.forEach.call(bar.querySelectorAll('button[data-k]'), function(b){
+  Array.prototype.forEach.call(bar.querySelectorAll('.sg-a, .sg-back'), function(b){
     bindCmdBtn(b, function(){ pressKey(b); });
   });
-  var m = bar.querySelector('button[data-more]');
-  if(m) bindCmdBtn(m, function(){ SPACE_MORE_OPEN = !SPACE_MORE_OPEN; sfx('click'); renderSpaceCmd(); });
-  var ib = bar.querySelector('button[data-info]');
-  if(ib) bindCmdBtn(ib, function(){ sfx('click'); spaceInfoSet(!SPACE_INFO); });
-  Array.prototype.forEach.call(bar.querySelectorAll('button[data-zoom]'), function(b){
-    bindCmdBtn(b, function(){
-      var d = b.getAttribute('data-zoom');
-      spaceZoomSet(d === 'reset' ? SPACE_ZOOM_DEFAULT : spaceZoomGet() + Number(d));
-      sfx('click');
-    });
+  bindCmdBtn(bar.querySelector('.sg-fab'), function(){
+    sfx(SPACE_MENU ? 'closeapp' : 'click'); sgMenuSet(!SPACE_MENU);
   });
-  bindFold(bar);
+  bindCmdBtn(bar.querySelector('.sg-spd'), function(){ sgSpeedCycle(); });
+  bindStick(bar.querySelector('.sg-stick'));
+  sgKeysSet(SPACE_HIDE);
+  SPACE_MENU = false;
+  if(SG_TIMER) clearInterval(SG_TIMER);
+  SG_TIMER = setInterval(spaceHudTick, 250);
+  spaceHudTick();
 }
-function bindFold(bar){
-  var f = bar.querySelector('button[data-fold]');
-  if(f) bindCmdBtn(f, function(){ SPACE_FOLDED = !SPACE_FOLDED; sfx('click'); renderSpaceCmd(); });
-}
+
 
 function closeView(){
   if(VIEW === 'dev' && SANDBOX) setSandbox(false);
@@ -3399,6 +3928,7 @@ function renderAboutOld(){
   <div class="card"><h3>技术</h3>
     <p>所有数据 AES-256-GCM 加密存在这个页面里，密码只在你手上。这个世界不依赖任何服务器——它靠现实时间算出来。</p>
     <p style="color:var(--dim2);font-size:12.5px">界面是手机桌面式的：想看什么点开什么，左上角的时钟和「她此刻在哪」会一直更新。</p>
+    <p style="color:var(--dim2);font-size:12px;margin-top:8px">本机构建 <b style="color:var(--dim)">${APP_BUILD}</b>（改完要刷新页面才生效；页面顶端的旧版本提醒可以直接点）</p>
   </div>
   <div class="card"><h3>开发者</h3>
     <p style="color:var(--dim);font-size:13.5px">沙盒测试：随机生成一段时间的记录，用来检查文本拼接有没有语义错乱或重复。数据只在内存里，关掉就没了，不写存档。</p>
@@ -4256,6 +4786,36 @@ document.addEventListener('keydown', function(e){ if(e.key === 'Escape' && VIEW)
 applyWall();
 /* 桌游结果桥 */
 bindBridge();
+/* ---------- 构建自检 ----------
+   手机上最常见的情况是「我改了，你还开着旧页面」。回到前台时问一次服务器，
+   版本对不上就在顶端浮一条，点一下直接刷新；取不到（离线 / 单文件 / 部署版没这文件）就安静待着。 */
+function buildHide(){ var p = $('buildPill'); if(p) p.classList.remove('on'); }
+function buildShow(v){
+  var p = $('buildPill');
+  if(!p) return;
+  p.textContent = '页面是旧的（' + String(v).replace(/[^\w:.\- ]/g, '') + '）· 点我刷新';
+  p.classList.add('on');
+}
+function buildCheck(){
+  if(APP_BUILD === '10-02 03:34·eaaee3') return;          // 直接开模板（没构建过）→ 不检查
+  var url = (IS_DEPLOY ? 'build.json' : '/build.json') + '?t=' + Date.now();
+  fetch(url, {cache:'no-store'})
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(j){
+      if(!j || !j.build) return;
+      if(String(j.build) === String(APP_BUILD)) buildHide(); else buildShow(j.build);
+    })
+    .catch(function(){});
+}
+(function(){
+  var p = $('buildPill');
+  if(p) p.addEventListener('click', function(){ location.reload(); });
+  setTimeout(buildCheck, 1200);
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) buildCheck(); });
+  window.addEventListener('focus', buildCheck);
+  setInterval(buildCheck, 5 * 60 * 1000);
+})();
+
 boot(IS_DEPLOY ? false : true);
 </script>
 </body>
