@@ -26,6 +26,7 @@
  "restore.py",
  "saku_word.json",
  "server.py",
+ "shell/MOBILE_UI.md",
  "shell/build_home.py",
  "shell/home.html",
  "standalone/deploy/index.html",
