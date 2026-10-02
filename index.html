@@ -2523,8 +2523,9 @@ function showView(id, originEl){
    所以可以直接在它的 window 上派发 KeyboardEvent。
    ============================================================ */
 const SPACE_CMD_MAIN = [
-  {k:'e',   t:'交互', cls:'ok'},
-  {k:'Enter', t:'确认'},
+  {k:'Enter', t:'确认', cls:'ok'},
+  {k:'e',   t:'交互'},
+  {k:'g',   t:'星图'},
   {k:'l',   t:'日志'},
   {k:'m',   t:'任务'},
   {k:'?',   t:'帮助'},
@@ -2634,17 +2635,7 @@ function renderSpaceCmd(){
   if(SPACE_ZOOM === null) SPACE_ZOOM = spaceZoomGet();
 
   bar.innerHTML =
-      '<div class="cmdzoom">'
-    +   '<span>字号</span>'
-    +   '<button class="cmdkey" data-zoom="-1">−</button>'
-    +   '<span class="zv">' + SPACE_ZOOM + '</span>'
-    +   '<button class="cmdkey" data-zoom="1">＋</button>'
-    +   '<button class="cmdkey" data-zoom="reset">复位</button>'
-    +   '<button class="cmdkey info' + (SPACE_INFO ? ' on' : '') + '" data-info="1">状态 '
-    +     (SPACE_INFO ? '显' : '隐') + '</button>'
-    +   '<button class="cmdkey more fold" data-fold="1">收起 ▾</button>'
-    + '</div>'
-    + '<div class="cmdrow">'
+      '<div class="cmdrow">'
     +   '<div class="dpad">'
     +     '<button class="sp"></button><button data-k="ArrowUp">↑</button><button class="sp"></button>'
     +     '<button data-k="ArrowLeft">←</button><button class="mid" data-k="Enter">确认</button><button data-k="ArrowRight">→</button>'
@@ -2654,11 +2645,20 @@ function renderSpaceCmd(){
     +     '<div class="cmdrow">' + mk(SPACE_CMD_MAIN) + '</div>'
     +     '<div class="cmdrow">' + mk(SPACE_CMD_MORE.slice(0, SPACE_MORE_OPEN ? 99 : 0))
     +       '<button class="cmdkey more" data-more="1">' + (SPACE_MORE_OPEN ? '收起 ▴' : '更多 ▾') + '</button></div>'
+    +     '<div class="cmdrow cmdzoom">'
+    +       '<span>字号</span>'
+    +       '<button class="cmdkey" data-zoom="-1">−</button>'
+    +       '<span class="zv">' + SPACE_ZOOM + '</span>'
+    +       '<button class="cmdkey" data-zoom="1">＋</button>'
+    +       '<button class="cmdkey info' + (SPACE_INFO ? ' on' : '') + '" data-info="1">状态 '
+    +         (SPACE_INFO ? '显' : '隐') + '</button>'
+    +       '<button class="cmdkey more fold" data-fold="1">收起 ▾</button>'
+    +     '</div>'
     +     ((SPACE_KEY_OK === false) ? '<div class="cmdwarn">命令条暂时不可用：线上版跨域注不进按键。'
     +       '画面仍可点着走／看，完整手机版等正式打包。</div>' : '')
     +   '</div>'
     + '</div>'
-    + (SPACE_MORE_OPEN ? '<div class="cmdnote">十字键在地图里是走路，在对话／菜单里是上下选择，确认键就是回车。</div>' : '');
+    + (SPACE_MORE_OPEN ? '<div class="cmdnote">左手方向键 / 右手功能键。十字键在场景里是走路、在星图上是选星系、在对话里是选择；确认键就是回车；「星图」在地表与银河之间切换。</div>' : '');
 
   Array.prototype.forEach.call(bar.querySelectorAll('button[data-k]'), function(b){
     bindCmdBtn(b, function(){ pressKey(b); });
