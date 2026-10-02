@@ -2031,7 +2031,7 @@ body{ height:var(--vh) }
    ===================================================================== */
 const $ = id => document.getElementById(id);
 const IS_DEPLOY = true;
-const APP_BUILD = '10-02 05:58·9215b8';     // 构建时替换成时间戳；直接开模板时保持占位符 = 不自检
+const APP_BUILD = '10-02 06:07·9152a3';     // 构建时替换成时间戳；直接开模板时保持占位符 = 不自检
 const STORE_KEY = 'saku_pw';
 const WORLD_START = {
   date:  new Date(2026, 8, 19, 0, 0, 0),
@@ -2753,7 +2753,7 @@ const SG_SIZE = {
 let SPACE_INFO = false;        // 游戏左下角状态栏是否展开；手机默认收起，见 spaceInfoSet
 let SPACE_MENU = false;        // 右上角菜单抽屉是否打开
 let SPACE_HIDE = false;        // 沉浸模式：收起摇杆和动作键
-let SG_TIMER = null, SG_HINT = '';
+let SG_TIMER = null, SG_HINT = '', sgReportTimer = null;
 let SG_SEEN = -1, SG_LAST_AT = 0, SG_BLOG_N = -1, SG_BLOG_LAST = -2;
 const SG_LOG_SKIP = {dim:1};   // 走一步记一条「赶路 1 分钟」，浮层不显示这类
 const SG_DEAD = 0.26;          // 摇杆死区（半径比例）：中心这一圈不触发方向，防误触
@@ -2969,16 +2969,15 @@ function sgProbe(x, y){
 function sgReport(tag){
   try{
     var W = window.innerWidth || 0, H = window.innerHeight || 0;
-    var fr = document.getElementById('spaceFrame');
-    var r = fr ? fr.getBoundingClientRect() : { top: -1, bottom: -1, height: -1 };
     var box = function(sel){
-      var e = document.querySelector(sel);
+      var e = (typeof sel === 'string') ? document.querySelector(sel) : sel;
       if(!e) return '-';
       var b = e.getBoundingClientRect();
       return Math.round(b.left) + ',' + Math.round(b.top) + ',' + Math.round(b.width) + 'x' + Math.round(b.height);
     };
     var inner = '';
     try{
+      var fr = document.getElementById('spaceFrame');
       var d = fr && fr.contentDocument, i2 = d && d.getElementById('info'), mp = d && d.getElementById('modpanel');
       var st = d && d.getElementById('stage'), scr = d && d.getElementById('screen');
       inner = (i2 ? (i2.classList.contains('hidden') ? 'info:隐' : 'info:显!') : 'info:?')
@@ -2986,23 +2985,27 @@ function sgReport(tag){
             + (st ? ',stage:' + Math.round(st.clientHeight) : '')
             + (scr ? ',pre:' + Math.round(scr.getBoundingClientRect().height) : '');
     }catch(e){ inner = 'x-domain'; }
-    var cw = fr && fr.contentWindow;
     try{
+      var cw = fr && fr.contentWindow;
       if(cw && cw.__space && cw.__space.game){
         var L = cw.__space.game.layout();
         inner += ',log' + L.logRows + ',map' + L.mapH + ',win' + L.winW + 'x' + L.winH
-               + ',winY' + L.winY + ',设计' + L.designW + 'x' + L.designH;
+               + ',winY' + L.winY + ',设计' + L.designW + 'x' + L.designH
+               + ',行' + cw.__space.game.screenH + ',单行' + Math.round(cw.__space.out.diag.cellH);
       }
     }catch(e){}
     var q = '/__ui?b=' + encodeURIComponent(String(APP_BUILD).slice(0,16))
       + '&t=' + tag + '&wh=' + W + 'x' + H + '&dpr=' + (window.devicePixelRatio || 1)
-      + '&frame=' + Math.round(r.top) + '..' + Math.round(r.bottom) + '(' + Math.round(r.height) + ')'
+      + '&frame=' + box('#spaceFrame')
+      + '&shell=' + box('.game-shell')
+      + '&vbody=' + box('#viewBody')
+      + '&vhost=' + box('#viewHost')
       + '&hud=' + box('.sg-hud') + '&stick=' + box('.sg-stick') + '&pad=' + box('.sg-pad')
-      + '&at_mid=' + sgProbe(W >> 1, H >> 1)
-      + '&at_under=' + sgProbe(W >> 1, Math.round(H * 0.78))
-      + '&at_b40=' + sgProbe(W >> 1, H - 40)
-      + '&at_bl=' + sgProbe(20, H - 40)
-      + '&at_br=' + sgProbe(W - 20, H - 40)
+      + '&at30=' + sgProbe(W >> 1, Math.round(H * 0.30))
+      + '&at45=' + sgProbe(W >> 1, Math.round(H * 0.45))
+      + '&at60=' + sgProbe(W >> 1, Math.round(H * 0.60))
+      + '&at75=' + sgProbe(W >> 1, Math.round(H * 0.75))
+      + '&at88=' + sgProbe(W >> 1, Math.round(H * 0.88))
       + '&' + inner;
     new Image().src = (IS_DEPLOY ? 'http://127.0.0.1:8088' : '') + q;
   }catch(e){}
@@ -3333,8 +3336,12 @@ function renderSpaceCmd(){
   if(SG_TIMER) clearInterval(SG_TIMER);
   SG_TIMER = setInterval(spaceHudTick, 250);
   spaceHudTick();
+  /* 自己报：前 4 分钟每 15 秒一次 —— 手机上「到底长什么样」只有页面自己知道，
+     容器里没有浏览器、截屏接口又常关着，这条通道是唯一可靠的眼睛。 */
   setTimeout(function(){ sgReport('2s'); }, 2000);
-  setTimeout(function(){ sgReport('6s'); }, 6000);
+  var n = 0;
+  if(sgReportTimer) clearInterval(sgReportTimer);
+  sgReportTimer = setInterval(function(){ n++; sgReport('t' + (n*15) + 's'); if(n >= 16) clearInterval(sgReportTimer); }, 15000);
 }
 
 
