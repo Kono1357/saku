@@ -264,3 +264,20 @@ var chainDead = S.settleActive && (Date.now() - (S.settleTick || 0) > 5000);
 容器里没有浏览器，只有 jsdom —— **jsdom 没有排版引擎**，
 所以 CSS 层面的问题（字号撑破布局、元素被挤出屏幕、被遮挡）**测不出来**，
 必须靠真机截图或用户描述来定位。
+
+---
+
+## 太空游戏的手机操作层
+
+界面规格、间距与层级写在 `shell/MOBILE_UI.md`（摇杆 / 确认+交互 / 顶部信息条 / 右上菜单）。
+改完跑这两套，全绿再部署：
+
+```bash
+cd tests
+node layout.test.js    # 75 条几何与安全区（5 档屏宽，纯计算，不用浏览器）
+node space.test.js     # 82 条：结构 + 摇杆/按键真的驱动游戏（jsdom 真跑）
+```
+
+改 `shell/home.html` 之后必须：`python3 shell/build_home.py`（生成 index.html）、
+`python3 pixel/build_src.py`（更新加密备份）。太空游戏本体改了要重新
+`cp /root/space-game/space-text.html game/space.html`。
