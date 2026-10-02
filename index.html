@@ -2047,7 +2047,7 @@ body{ height:var(--vh) }
    ===================================================================== */
 const $ = id => document.getElementById(id);
 const IS_DEPLOY = true;
-const APP_BUILD = '10-02 03:34·eaaee3';     // 构建时替换成时间戳；直接开模板时保持占位符 = 不自检
+const APP_BUILD = '10-02 03:47·215eb9';     // 构建时替换成时间戳；直接开模板时保持占位符 = 不自检
 const STORE_KEY = 'saku_pw';
 const WORLD_START = {
   date:  new Date(2026, 8, 19, 0, 0, 0),
@@ -4793,11 +4793,11 @@ function buildHide(){ var p = $('buildPill'); if(p) p.classList.remove('on'); }
 function buildShow(v){
   var p = $('buildPill');
   if(!p) return;
-  p.textContent = '页面是旧的（' + String(v).replace(/[^\w:.\- ]/g, '') + '）· 点我刷新';
+  p.textContent = '页面是旧的（' + String(v).replace(/[^\w:.\- ·]/g, '') + '）· 点我刷新';
   p.classList.add('on');
 }
 function buildCheck(){
-  if(APP_BUILD === '10-02 03:34·eaaee3') return;          // 直接开模板（没构建过）→ 不检查
+  if(APP_BUILD.charAt(0) === '_') return;         // 模板没被构建过（直接开 home.html）→ 不检查
   var url = (IS_DEPLOY ? 'build.json' : '/build.json') + '?t=' + Date.now();
   fetch(url, {cache:'no-store'})
     .then(function(r){ return r.ok ? r.json() : null; })
